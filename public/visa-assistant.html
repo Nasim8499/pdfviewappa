@@ -461,18 +461,22 @@
       </section>
 
       <!-- TAB 4: PDF EXPORT & PRINT PREVIEW -->
-      <section id="tab-pdf" class="tab-content hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
-              <i class="fa-solid fa-file-pdf text-red-400"></i> Official Visa PDF Form
+      <section id="tab-pdf" class="tab-content hidden space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <h2 class="text-sm font-bold text-white flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-file-pdf text-red-400"></i> Official Visa PDF
             </h2>
-            <p class="text-[10px] text-slate-400">Export PDF button দিলে A4 PDF download হবে</p>
+            <p class="text-[10px] text-slate-400 truncate">Real government-issued form preview</p>
           </div>
-
-          <button onclick="downloadA4PDF()" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5">
-            <i class="fa-solid fa-download"></i> Export PDF
-          </button>
+          <div class="flex gap-1.5 shrink-0">
+            <button onclick="openPdfNewTab()" class="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </button>
+            <button onclick="downloadA4PDF()" class="py-2 px-3 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> Download
+            </button>
+          </div>
         </div>
 
         <!-- Form Selector Switcher Pills -->
@@ -480,18 +484,46 @@
           <button onclick="switchPdfView('schengen')" id="pill-schengen" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white whitespace-nowrap">Schengen</button>
           <button onclick="switchPdfView('moldova')" id="pill-moldova" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Moldova</button>
           <button onclick="switchPdfView('myanmar')" id="pill-myanmar" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Myanmar</button>
-          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore 14A</button>
+          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore</button>
           <button onclick="switchPdfView('malta')" id="pill-malta" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Malta</button>
-          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ 1017</button>
+          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ1017</button>
         </div>
 
-        <!-- Scrollable Printable Paper Container -->
-        <div class="w-full overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-2">
-          <div id="pdf-paper-container" class="transform scale-[0.85] origin-top sm:scale-100">
-            <!-- Dynamic A4 Form HTML Content rendered here -->
+        <!-- Zoom Controls -->
+        <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <div class="w-7 h-7 rounded-lg bg-red-500/20 text-red-300 grid place-items-center shrink-0">
+              <i class="fa-solid fa-file-pdf text-[11px]"></i>
+            </div>
+            <div class="min-w-0">
+              <p id="pdf-active-name" class="text-[11px] font-bold text-white truncate">Schengen Visa</p>
+              <p class="text-[9px] text-slate-400 truncate">Official PDF · Real Form</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out">
+              <i class="fa-solid fa-minus text-xs"></i>
+            </button>
+            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center">100%</span>
+            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom">
+              <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+            </button>
           </div>
         </div>
+
+        <!-- Real PDF Viewer -->
+        <div class="w-full rounded-2xl border border-slate-800 bg-slate-950 overflow-auto no-scrollbar" style="height: 60vh; min-height: 380px;">
+          <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
+            <iframe id="pdf-frame" src="" title="Official Visa PDF" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+          </div>
+        </div>
+
+        <p class="text-[10px] text-slate-500 text-center px-2">Tap Download to save the official PDF, or the external icon to open in a new tab for print / share.</p>
       </section>
+
 
       <!-- TAB 5: SETTINGS -->
       <section id="tab-settings" class="tab-content hidden space-y-4">
@@ -874,8 +906,35 @@
     }
 
     /* ==========================================================================
-       A4 OFFICIAL VISA PDF RENDERERS
+       REAL OFFICIAL VISA PDF VIEWER
        ========================================================================== */
+    const PDF_URLS = {
+      schengen:  '/__l5e/assets-v1/ad8c7a3a-b00a-4256-9eab-8bacfb7a5a9d/1415.pdf',
+      moldova:   '/__l5e/assets-v1/a6cfa3b8-a2f7-497a-84ff-d5a36c9958a6/entry-visa-form.pdf',
+      myanmar:   '/__l5e/assets-v1/d0c1bba1-bd64-4eec-8446-4841a7c6e111/6597ecafcb210458b9b8667b_visa_application_form_160226.pdf',
+      singapore: '/__l5e/assets-v1/05f1a62a-56fd-4017-b428-db847c16a250/form14a_singapore.pdf',
+      malta:     '/__l5e/assets-v1/16ebad19-5559-4d3a-92d6-868ee2fc54f1/Documentation-required-for-adoption-visa.pdf',
+      nz:        '/__l5e/assets-v1/e408ff08-259c-443f-8b6c-571e226e424c/inz1017.pdf',
+    };
+    const PDF_LABELS = {
+      schengen:  'Schengen Visa (Form 1415)',
+      moldova:   'Moldova Entry Visa',
+      myanmar:   'Myanmar Visa Application',
+      singapore: 'Singapore Form 14A',
+      malta:     'Malta Adoption Visa Docs',
+      nz:        'New Zealand INZ 1017',
+    };
+    const PDF_FILENAMES = {
+      schengen:  'Schengen_Visa_Application.pdf',
+      moldova:   'Moldova_Entry_Visa.pdf',
+      myanmar:   'Myanmar_Visa_Application.pdf',
+      singapore: 'Singapore_Form_14A.pdf',
+      malta:     'Malta_Adoption_Visa.pdf',
+      nz:        'NZ_INZ_1017.pdf',
+    };
+
+    let pdfZoom = 1;
+
     function switchPdfView(formType) {
       appState.activeForm = formType;
       document.querySelectorAll('.pdf-pill').forEach(btn => {
@@ -887,368 +946,56 @@
         activePill.classList.remove('bg-slate-800', 'text-slate-300');
         activePill.classList.add('bg-indigo-600', 'text-white');
       }
-
       renderActiveA4Form();
     }
 
     function renderActiveA4Form() {
-      const container = document.getElementById('pdf-paper-container');
-      const p = appState.profile;
-
-      if (appState.activeForm === 'schengen') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="flex justify-between items-start border-b-2 border-slate-900 pb-2 mb-3">
-              <div>
-                <h1 class="text-base font-bold uppercase tracking-wider">Application for Schengen Visa</h1>
-                <p class="text-xs italic text-slate-600">Demande de visa Schengen</p>
-                <p class="text-[9px] font-semibold mt-1">THIS APPLICATION FORM IS FREE</p>
-              </div>
-              <div class="w-20 h-24 border border-slate-400 flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50">
-                <span>PHOTO</span>
-                <span>35x45mm</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-2 border border-slate-900 p-2 text-[10px]">
-              <div class="col-span-8 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">1. SURNAME (Family Name):</span>
-                <span class="font-mono text-sm font-bold text-indigo-900">${p.surname || 'RAHMAN'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
-                <span class="font-bold block">FOR OFFICIAL USE ONLY</span>
-                <span>Date: _________</span>
-              </div>
-
-              <div class="col-span-8 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">2. SURNAME AT BIRTH (Former family name):</span>
-                <span>${p.surname || ''}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
-                <span>Visa App No: __________</span>
-              </div>
-
-              <div class="col-span-12 border-b border-slate-400 p-1">
-                <span class="font-bold block">3. FIRST NAME(S) (Given names):</span>
-                <span class="font-mono text-sm font-bold text-indigo-900">${p.givenNames || 'ARIFUR'}</span>
-              </div>
-
-              <div class="col-span-4 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">4. DATE OF BIRTH:</span>
-                <span class="font-mono font-semibold">${p.dob || '12/05/1991'}</span>
-              </div>
-              <div class="col-span-4 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">5. PLACE OF BIRTH:</span>
-                <span>${p.pob || 'DHAKA'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1">
-                <span class="font-bold block">6. COUNTRY OF BIRTH:</span>
-                <span>${p.cob || 'BANGLADESH'}</span>
-              </div>
-
-              <div class="col-span-6 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">7. CURRENT NATIONALITY:</span>
-                <span class="font-bold text-indigo-900">${p.nationality || 'BANGLADESHI'}</span>
-              </div>
-              <div class="col-span-3 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">8. SEX:</span>
-                <span>[${p.sex === 'Male' ? 'X' : ' '}] Male  [${p.sex === 'Female' ? 'X' : ' '}] Female</span>
-              </div>
-              <div class="col-span-3 border-b border-slate-400 p-1">
-                <span class="font-bold block">9. MARITAL STATUS:</span>
-                <span>Single / Married [X]</span>
-              </div>
-
-              <div class="col-span-12 border-b border-slate-400 p-1">
-                <span class="font-bold block">12. TYPE OF TRAVEL DOCUMENT:</span>
-                <span>[X] Ordinary Passport  [ ] Diplomatic  [ ] Service  [ ] Official</span>
-              </div>
-
-              <div class="col-span-3 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">13. PASSPORT NUMBER:</span>
-                <span class="font-mono font-bold text-indigo-900">${p.passportNo || 'A08945123'}</span>
-              </div>
-              <div class="col-span-3 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">14. DATE OF ISSUE:</span>
-                <span>${p.issueDate || '15/03/2020'}</span>
-              </div>
-              <div class="col-span-3 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">15. VALID UNTIL:</span>
-                <span>${p.expiryDate || '14/03/2030'}</span>
-              </div>
-              <div class="col-span-3 border-b border-slate-400 p-1">
-                <span class="font-bold block">16. ISSUED BY:</span>
-                <span>${p.issuingAuthority || 'DIP DHAKA'}</span>
-              </div>
-
-              <div class="col-span-8 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">17. APPLICANT'S HOME ADDRESS AND EMAIL:</span>
-                <span>${p.address || 'House 42, Banani, Dhaka'}</span><br>
-                <span class="italic">${p.email || 'arifur.rahman@example.com'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1">
-                <span class="font-bold block">TELEPHONE NUMBER:</span>
-                <span>${p.phone || '+8801711223344'}</span>
-              </div>
-
-              <div class="col-span-6 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">19. CURRENT OCCUPATION:</span>
-                <span>${p.occupation || 'Software Engineer'}</span>
-              </div>
-              <div class="col-span-6 border-b border-slate-400 p-1">
-                <span class="font-bold block">20. EMPLOYER / ADDRESS:</span>
-                <span>${p.employer || 'Tech Global Ltd'}</span>
-              </div>
-
-              <div class="col-span-12 border-b border-slate-400 p-1">
-                <span class="font-bold block">21. MAIN PURPOSE(S) OF THE JOURNEY:</span>
-                <span>[X] Tourism   [ ] Business   [ ] Visiting Family/Friends   [ ] Cultural/Sports</span>
-              </div>
-
-              <div class="col-span-6 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">22. MEMBER STATE OF DESTINATION:</span>
-                <span>FRANCE / SCHENGEN AREA</span>
-              </div>
-              <div class="col-span-6 border-b border-slate-400 p-1">
-                <span class="font-bold block">23. MEMBER STATE OF FIRST ENTRY:</span>
-                <span>FRANCE</span>
-              </div>
-
-              <div class="col-span-12 p-2 mt-4 border-t border-slate-900 flex justify-between items-end">
-                <div>
-                  <p class="font-bold">PLACE AND DATE:</p>
-                  <p>DHAKA, ${new Date().toLocaleDateString()}</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-bold">SIGNATURE OF APPLICANT:</p>
-                  <div class="h-8 border-b border-slate-800 w-48 mt-2"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (appState.activeForm === 'moldova') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="text-center border-b-2 border-slate-900 pb-2 mb-3">
-              <h1 class="text-base font-bold uppercase">Application for Entry Visa to Republic of Moldova</h1>
-              <p class="text-xs text-slate-600">This application form is free</p>
-            </div>
-
-            <div class="grid grid-cols-12 gap-2 border border-slate-900 p-2 text-[10px]">
-              <div class="col-span-8 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">1. Surname (Family name):</span>
-                <span class="font-mono text-sm font-bold text-emerald-900">${p.surname || 'RAHMAN'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
-                <span class="font-bold block">FOR OFFICIAL USE ONLY</span>
-              </div>
-
-              <div class="col-span-8 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">3. First Name(s) (Given name):</span>
-                <span class="font-mono text-sm font-bold text-emerald-900">${p.givenNames || 'ARIFUR'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
-                <span>Visa App No: MOL-2026-99</span>
-              </div>
-
-              <div class="col-span-4 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">4. Date of Birth:</span>
-                <span>${p.dob || '12/05/1991'}</span>
-              </div>
-              <div class="col-span-4 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">5. Place of Birth:</span>
-                <span>${p.pob || 'DHAKA'}</span>
-              </div>
-              <div class="col-span-4 border-b border-slate-400 p-1">
-                <span class="font-bold block">7. Current Nationality:</span>
-                <span class="font-bold">${p.nationality || 'BANGLADESHI'}</span>
-              </div>
-
-              <div class="col-span-6 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">13. Number of Travel Document:</span>
-                <span class="font-mono font-bold">${p.passportNo || 'A08945123'}</span>
-              </div>
-              <div class="col-span-3 border-r border-b border-slate-400 p-1">
-                <span class="font-bold block">14. Issue Date:</span>
-                <span>${p.issueDate || '15/03/2020'}</span>
-              </div>
-              <div class="col-span-3 border-b border-slate-400 p-1">
-                <span class="font-bold block">15. Valid Until:</span>
-                <span>${p.expiryDate || '14/03/2030'}</span>
-              </div>
-
-              <div class="col-span-12 border-b border-slate-400 p-1">
-                <span class="font-bold block">17. Applicant's Home Address & Phone:</span>
-                <span>${p.address || 'Dhaka, Bangladesh'} | Tel: ${p.phone || '+8801711223344'}</span>
-              </div>
-
-              <div class="col-span-12 p-3 mt-6 border-t border-slate-900 flex justify-between">
-                <div>
-                  <p class="font-bold">32. Place & Date:</p>
-                  <p>Dhaka, ${new Date().toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p class="font-bold">33. Signature:</p>
-                  <div class="h-6 border-b border-slate-800 w-40 mt-2"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (appState.activeForm === 'myanmar') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="text-center border-b pb-2 mb-2">
-              <p class="text-[10px] font-bold">GOVERNMENT OF THE REPUBLIC OF THE UNION OF MYANMAR</p>
-              <p class="text-[9px]">MINISTRY OF IMMIGRATION AND POPULATION</p>
-              <h1 class="text-xs font-bold uppercase mt-1">APPLICATION FOR ENTRY VISA / BUSINESS VISA</h1>
-            </div>
-
-            <div class="space-y-2 text-[10px]">
-              <div class="flex justify-between border p-2">
-                <div>
-                  <p><span class="font-bold">1. Full Name:</span> ${p.surname || 'RAHMAN'} ${p.givenNames || 'ARIFUR'}</p>
-                  <p><span class="font-bold">2. Father's Name:</span> M. RAHMAN</p>
-                  <p><span class="font-bold">3. Nationality:</span> ${p.nationality || 'BANGLADESHI'}</p>
-                  <p><span class="font-bold">4. Sex:</span> ${p.sex || 'Male'}  <span class="font-bold ml-4">5. Date of Birth:</span> ${p.dob || '12/05/1991'}</p>
-                </div>
-                <div class="w-16 h-20 border text-center text-[8px] p-1">Recent Photo</div>
-              </div>
-
-              <div class="border p-2 space-y-1">
-                <p><span class="font-bold">7. Occupation:</span> ${p.occupation || 'Software Engineer'}</p>
-                <p><span class="font-bold">9. Passport No:</span> ${p.passportNo || 'A08945123'}  <span class="font-bold ml-4">Expiry Date:</span> ${p.expiryDate || '14/03/2030'}</p>
-                <p><span class="font-bold">10. Permanent Address:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
-                <p><span class="font-bold">11. Address in Myanmar:</span> Yangon Hotel Center</p>
-              </div>
-
-              <div class="pt-4 flex justify-between">
-                <span>Dated: ${new Date().toLocaleDateString()}</span>
-                <span>Signature of Applicant: ________________</span>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (appState.activeForm === 'singapore') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-3">
-              <div>
-                <h1 class="text-sm font-bold">FORM 14A - APPLICATION FOR ENTRY VISA</h1>
-                <p class="text-[9px]">IMMIGRATION ACT 1959 [SECTION 55(1)]</p>
-              </div>
-              <span class="text-[9px] border px-2 py-0.5">THIS FORM IS ISSUED FREE</span>
-            </div>
-
-            <div class="border border-slate-900 p-2 text-[10px] space-y-2">
-              <h2 class="font-bold bg-slate-200 px-1">PART I - PARTICULARS OF APPLICANT</h2>
-              <p><span class="font-bold">Name:</span> ${p.surname || 'RAHMAN'} ${p.givenNames || 'ARIFUR'}</p>
-              <p><span class="font-bold">Date of Birth:</span> ${p.dob || '12/05/1991'} | <span class="font-bold">Sex:</span> ${p.sex || 'Male'}</p>
-              <p><span class="font-bold">Country of Birth:</span> ${p.cob || 'BANGLADESH'} | <span class="font-bold">Nationality:</span> ${p.nationality || 'BANGLADESHI'}</p>
-              <p><span class="font-bold">Travel Document No:</span> ${p.passportNo || 'A08945123'} | <span class="font-bold">Expiry:</span> ${p.expiryDate || '14/03/2030'}</p>
-
-              <h2 class="font-bold bg-slate-200 px-1 mt-2">PART II - OTHER DETAILS</h2>
-              <p><span class="font-bold">Address in Country of Residence:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
-              <p><span class="font-bold">Occupation:</span> ${p.occupation || 'Engineer'}</p>
-
-              <div class="pt-4 border-t flex justify-between">
-                <p>Date: ${new Date().toLocaleDateString()}</p>
-                <p>Signature of Applicant: _______________________</p>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (appState.activeForm === 'malta') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="border-b-2 border-slate-900 pb-2 mb-3 flex justify-between items-center">
-              <div>
-                <h1 class="text-sm font-bold">IDENTITÀ - CENTRAL VISA UNIT MALTA</h1>
-                <p class="text-[10px]">DOCUMENTATION REQUIRED FOR ADOPTION VISA</p>
-              </div>
-              <span class="text-xs font-bold text-slate-600">MALTA</span>
-            </div>
-
-            <div class="space-y-2 text-[10px]">
-              <div class="p-2 bg-slate-100 border">
-                <p><span class="font-bold">Applicant Name:</span> ${p.surname || 'RAHMAN'}, ${p.givenNames || 'ARIFUR'}</p>
-                <p><span class="font-bold">Passport Number:</span> ${p.passportNo || 'A08945123'} (Valid Expiry: ${p.expiryDate || '14/03/2030'})</p>
-              </div>
-
-              <div class="space-y-1.5 border p-2">
-                <p class="font-bold border-b">CHECKLIST OF SUBMITTED DOCUMENTS:</p>
-                <p>[X] 01 Fully filled in Visa Application form signed</p>
-                <p>[X] 02 Passport with minimum validity of 8 months</p>
-                <p>[X] 03 1 Passport photo according to ICAO Standards</p>
-                <p>[X] 04 Legal Adoption and custody papers</p>
-                <p>[X] 05 Medical and Travel insurance (Coverage €30,000)</p>
-                <p>[X] 06 Flight ticket details & full itinerary</p>
-                <p>[X] 07 Full passport copy</p>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (appState.activeForm === 'nz') {
-        container.innerHTML = `
-          <div id="a4-target" class="a4-page font-sans text-slate-900">
-            <div class="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-3">
-              <div>
-                <h1 class="text-sm font-bold">NEW ZEALAND VISITOR VISA APPLICATION</h1>
-                <p class="text-[9px]">Form INZ 1017 - Temporary Stay in New Zealand</p>
-              </div>
-              <div class="text-right">
-                <span class="text-xs font-bold block">IMMIGRATION NEW ZEALAND</span>
-              </div>
-            </div>
-
-            <div class="border border-slate-900 p-2 text-[10px] space-y-2">
-              <h2 class="font-bold bg-slate-200 px-1">SECTION A: PRINCIPAL APPLICANT DETAILS</h2>
-              <p><span class="font-bold">Family / Last Name:</span> ${p.surname || 'RAHMAN'}</p>
-              <p><span class="font-bold">Given / First Name(s):</span> ${p.givenNames || 'ARIFUR'}</p>
-              <p><span class="font-bold">Date of Birth:</span> ${p.dob || '12/05/1991'} | <span class="font-bold">Gender:</span> ${p.sex || 'Male'}</p>
-              <p><span class="font-bold">Passport Number:</span> ${p.passportNo || 'A08945123'} | <span class="font-bold">Expiry Date:</span> ${p.expiryDate || '14/03/2030'}</p>
-
-              <h2 class="font-bold bg-slate-200 px-1 mt-2">SECTION B: CONTACT DETAILS</h2>
-              <p><span class="font-bold">Residential Address:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
-              <p><span class="font-bold">Email:</span> ${p.email || 'arifur.rahman@example.com'}</p>
-
-              <div class="pt-4 border-t flex justify-between">
-                <p>Date: ${new Date().toLocaleDateString()}</p>
-                <p>Signature: _______________________</p>
-              </div>
-            </div>
-          </div>
-        `;
-      }
+      const frame = document.getElementById('pdf-frame');
+      const label = document.getElementById('pdf-active-name');
+      if (!frame) return;
+      const url = PDF_URLS[appState.activeForm] || PDF_URLS.schengen;
+      // #toolbar=0 hides native browser PDF toolbar for a cleaner premium look
+      frame.src = url + '#toolbar=0&navpanes=0&view=FitH';
+      if (label) label.textContent = PDF_LABELS[appState.activeForm] || 'Visa PDF';
+      resetZoom();
     }
 
-    /* ==========================================================================
-       A4 PDF DOWNLOAD GENERATOR
-       ========================================================================== */
-    function downloadA4PDF() {
-      const element = document.getElementById('a4-target');
-      if (!element) {
-        showToast("Error generating PDF preview!");
-        return;
+    function zoomPdf(dir) {
+      pdfZoom = Math.min(2.5, Math.max(0.6, pdfZoom + dir * 0.15));
+      applyZoom();
+    }
+    function resetZoom() {
+      pdfZoom = 1;
+      applyZoom();
+    }
+    function applyZoom() {
+      const wrap = document.getElementById('pdf-viewer-wrap');
+      const label = document.getElementById('pdf-zoom-label');
+      if (wrap) {
+        wrap.style.transform = `scale(${pdfZoom})`;
+        wrap.style.width = `${100 / pdfZoom}%`;
+        wrap.style.height = `${100 / pdfZoom}%`;
       }
+      if (label) label.textContent = `${Math.round(pdfZoom * 100)}%`;
+    }
 
-      showToast("Preparing A4 PDF Download...");
+    function openPdfNewTab() {
+      const url = PDF_URLS[appState.activeForm];
+      if (url) window.open(url, '_blank', 'noopener');
+    }
 
-      const opt = {
-        margin:       0,
-        filename:     `${appState.activeForm}_Visa_Application_${appState.profile.surname || 'Form'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(element).save().then(() => {
-        showToast("PDF Downloaded successfully!");
-      }).catch(err => {
-        console.error(err);
-        showToast("PDF generated!");
-      });
+    function downloadA4PDF() {
+      const url = PDF_URLS[appState.activeForm];
+      const name = PDF_FILENAMES[appState.activeForm] || 'visa-form.pdf';
+      if (!url) { showToast('PDF not available'); return; }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('Downloading official PDF…');
     }
 
     /* Toast Notification Utility */
@@ -1264,4 +1011,5 @@
     }
   </script>
 </body>
+
 </html>
