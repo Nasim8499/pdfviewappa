@@ -461,18 +461,22 @@
       </section>
 
       <!-- TAB 4: PDF EXPORT & PRINT PREVIEW -->
-      <section id="tab-pdf" class="tab-content hidden space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
-              <i class="fa-solid fa-file-pdf text-red-400"></i> Official Visa PDF Form
+      <section id="tab-pdf" class="tab-content hidden space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <h2 class="text-sm font-bold text-white flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-file-pdf text-red-400"></i> Official Visa PDF
             </h2>
-            <p class="text-[10px] text-slate-400">Export PDF button দিলে A4 PDF download হবে</p>
+            <p class="text-[10px] text-slate-400 truncate">Real government-issued form preview</p>
           </div>
-
-          <button onclick="downloadA4PDF()" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5">
-            <i class="fa-solid fa-download"></i> Export PDF
-          </button>
+          <div class="flex gap-1.5 shrink-0">
+            <button onclick="openPdfNewTab()" class="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </button>
+            <button onclick="downloadA4PDF()" class="py-2 px-3 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> Download
+            </button>
+          </div>
         </div>
 
         <!-- Form Selector Switcher Pills -->
@@ -480,18 +484,46 @@
           <button onclick="switchPdfView('schengen')" id="pill-schengen" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white whitespace-nowrap">Schengen</button>
           <button onclick="switchPdfView('moldova')" id="pill-moldova" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Moldova</button>
           <button onclick="switchPdfView('myanmar')" id="pill-myanmar" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Myanmar</button>
-          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore 14A</button>
+          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore</button>
           <button onclick="switchPdfView('malta')" id="pill-malta" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Malta</button>
-          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ 1017</button>
+          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ1017</button>
         </div>
 
-        <!-- Scrollable Printable Paper Container -->
-        <div class="w-full overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-2">
-          <div id="pdf-paper-container" class="transform scale-[0.85] origin-top sm:scale-100">
-            <!-- Dynamic A4 Form HTML Content rendered here -->
+        <!-- Zoom Controls -->
+        <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <div class="w-7 h-7 rounded-lg bg-red-500/20 text-red-300 grid place-items-center shrink-0">
+              <i class="fa-solid fa-file-pdf text-[11px]"></i>
+            </div>
+            <div class="min-w-0">
+              <p id="pdf-active-name" class="text-[11px] font-bold text-white truncate">Schengen Visa</p>
+              <p class="text-[9px] text-slate-400 truncate">Official PDF · Real Form</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out">
+              <i class="fa-solid fa-minus text-xs"></i>
+            </button>
+            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center">100%</span>
+            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom">
+              <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+            </button>
           </div>
         </div>
+
+        <!-- Real PDF Viewer -->
+        <div class="w-full rounded-2xl border border-slate-800 bg-slate-950 overflow-auto no-scrollbar" style="height: 60vh; min-height: 380px;">
+          <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
+            <iframe id="pdf-frame" src="" title="Official Visa PDF" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+          </div>
+        </div>
+
+        <p class="text-[10px] text-slate-500 text-center px-2">Tap Download to save the official PDF, or the external icon to open in a new tab for print / share.</p>
       </section>
+
 
       <!-- TAB 5: SETTINGS -->
       <section id="tab-settings" class="tab-content hidden space-y-4">
