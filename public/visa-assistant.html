@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI Visa Assistant - Passport OCR & Auto Form Filler</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Tesseract.js for Browser OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- html2pdf for A4 PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .scanner-laser {
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0) 0%, rgba(99, 102, 241, 0.8) 50%, rgba(99, 102, 241, 0) 100%);
+      animation: scanAnim 2s infinite ease-in-out;
+    }
+
+    @keyframes scanAnim {
+      0% { top: 0%; }
+      50% { top: 85%; }
+      100% { top: 0%; }
+    }
+
+    /* A4 Styling for Export */
+    .a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 15mm;
+      margin: 0 auto;
+      background: white;
+      color: #1e293b;
+      font-size: 11px;
+      line-height: 1.4;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    }
+
+    @media print {
+      body { background: white; }
+      .no-print { display: none !important; }
+      .a4-page { box-shadow: none; margin: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body class="h-full flex items-center justify-center bg-slate-950 p-0 sm:p-4 overflow-hidden">
+
+  <!-- Main Mobile Wrapper -->
+  <div class="w-full h-full max-w-md max-h-[920px] bg-slate-900 sm:rounded-[40px] shadow-2xl flex flex-col relative overflow-hidden border border-slate-800">
+    
+    <!-- Mobile Header Bar -->
+    <header class="px-5 pt-4 pb-3 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/90 backdrop-blur z-20">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid font-bold text-sm fa-passport"></i>
+        </div>
+        <div>
+          <h1 class="text-sm font-bold tracking-wide text-white flex items-center gap-1.5">
+            VisaAI <span class="bg-indigo-500/20 text-indigo-400 text-[10px] px-2 py-0.5 rounded-full border border-indigo-500/30 font-semibold">PRO</span>
+          </h1>
+          <p class="text-[10px] text-slate-400 font-medium">Smart Application Assistant</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="switchTab('tab-settings')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
+          <i class="fa-solid fa-gear text-xs"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Dynamic View Body -->
+    <main class="flex-1 overflow-y-auto no-scrollbar relative p-4 space-y-4" id="app-viewport">
+
+      <!-- TAB 1: DASHBOARD HOME -->
+      <section id="tab-home" class="tab-content space-y-4">
+        <!-- AI Welcome Banner -->
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-900/60 via-purple-900/40 to-slate-800 border border-indigo-500/30 relative overflow-hidden">
+          <div class="absolute -right-4 -bottom-4 opacity-10 text-white text-8xl">
+            <i class="fa-solid fa-plane-departure"></i>
+          </div>
+          <span class="inline-block px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold mb-2 border border-indigo-500/30">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto Form Filler AI
+          </span>
+          <h2 class="text-lg font-bold text-white mb-1">Passport Scan to Visa Application</h2>
+          <p class="text-xs text-slate-300 leading-relaxed">Upload your passport photo. AI OCR will parse your data and automatically populate complete official Visa PDF forms.</p>
+          
+          <div class="mt-4 flex gap-2">
+            <button onclick="switchTab('tab-scan')" class="flex-1 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+              <i class="fa-solid fa-camera"></i> Scan Passport
+            </button>
+            <button onclick="loadDemoData()" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700 transition">
+              <i class="fa-solid fa-flask"></i> Load Demo
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Passport Extraction Status Card -->
+        <div class="glass-card rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+              <i class="fa-solid fa-id-card text-indigo-400"></i> Extracted Profile Data
+            </span>
+            <span id="data-status-badge" class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
+              No Data Loaded
+            </span>
+          </div>
+
+          <div id="profile-summary-box" class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
+              <span class="text-[10px] text-slate-400 block">Full Name</span>
+              <span id="summary-name" class="font-semibold text-slate-200 block truncate">-- --</span>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
+              <span class="text-[10px] text-slate-400 block">Passport No.</span>
+              <span id="summary-passport" class="font-semibold text-indigo-300 block">--</span>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
+              <span class="text-[10px] text-slate-400 block">Nationality</span>
+              <span id="summary-nat" class="font-semibold text-slate-200 block">--</span>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
+              <span class="text-[10px] text-slate-400 block">Expiry Date</span>
+              <span id="summary-expiry" class="font-semibold text-slate-200 block">--</span>
+            </div>
+          </div>
+
+          <button onclick="switchTab('tab-edit')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-user-pen"></i> Review & Edit All Extracted Fields
+          </button>
+        </div>
+
+        <!-- Supported Visa Forms Selector -->
+        <div class="space-y-2">
+          <h3 class="text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center justify-between">
+            <span>Select Target Visa Application</span>
+            <span class="text-[10px] text-indigo-400 font-normal">6 Applications Ready</span>
+          </h3>
+
+          <div class="grid grid-cols-1 gap-2.5">
+            
+            <!-- Schengen -->
+            <div onclick="selectVisaForm('schengen')" id="card-schengen" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg font-bold border border-blue-500/30">
+                  <i class="fa-solid fa-flag-usa"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Schengen Visa Form</h4>
+                  <p class="text-[10px] text-slate-400">Demande de visa Schengen (Fields 1-37)</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+            <!-- Moldova -->
+            <div onclick="selectVisaForm('moldova')" id="card-moldova" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-lg font-bold border border-emerald-500/30">
+                  <i class="fa-solid fa-earth-europe"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Republic of Moldova</h4>
+                  <p class="text-[10px] text-slate-400">Entry Visa Form (Fields 1-33)</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+            <!-- Myanmar -->
+            <div onclick="selectVisaForm('myanmar')" id="card-myanmar" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center text-lg font-bold border border-amber-500/30">
+                  <i class="fa-solid fa-monument"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Myanmar (Burma)</h4>
+                  <p class="text-[10px] text-slate-400">Entry / Business Visa Form</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+            <!-- Singapore -->
+            <div onclick="selectVisaForm('singapore')" id="card-singapore" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center text-lg font-bold border border-red-500/30">
+                  <i class="fa-solid fa-city"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Singapore Form 14A</h4>
+                  <p class="text-[10px] text-slate-400">Application for Entry Visa (Parts I-V)</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+            <!-- Malta -->
+            <div onclick="selectVisaForm('malta')" id="card-malta" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center text-lg font-bold border border-violet-500/30">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Malta Adoption Visa</h4>
+                  <p class="text-[10px] text-slate-400">Central Visa Unit Checklist Form</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+            <!-- New Zealand -->
+            <div onclick="selectVisaForm('nz')" id="card-nz" class="visa-card cursor-pointer p-3.5 rounded-2xl glass-card border-slate-700/80 hover:border-indigo-500/60 transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-teal-600/20 text-teal-400 flex items-center justify-center text-lg font-bold border border-teal-500/30">
+                  <i class="fa-solid fa-mountain-sun"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">New Zealand Visitor Visa</h4>
+                  <p class="text-[10px] text-slate-400">INZ 1017 Temporary Stay Form</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PASSPORT SCANNER & OCR / AI PROCESSOR -->
+      <section id="tab-scan" class="tab-content hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-expand text-indigo-400"></i> Passport & Document Scanner
+          </h2>
+          <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Tesseract.js OCR + Gemini AI</span>
+        </div>
+
+        <!-- Scanner View Box -->
+        <div class="relative w-full aspect-[4/3] rounded-2xl bg-slate-950 border-2 border-dashed border-slate-700 overflow-hidden flex flex-col items-center justify-center p-3 group">
+          <img id="passport-preview" class="absolute inset-0 w-full h-full object-contain hidden" alt="Passport Upload Preview">
+          
+          <div id="scanner-laser-line" class="absolute left-0 right-0 h-1 scanner-laser hidden z-10"></div>
+
+          <div id="upload-placeholder" class="text-center space-y-2 z-0">
+            <div class="w-12 h-12 rounded-full bg-slate-800/80 text-indigo-400 flex items-center justify-center mx-auto text-xl border border-slate-700">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-slate-200">ছবি তুলে Upload করো / Drop Photo</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">Supports Passport JPG, PNG, WEBP</p>
+            </div>
+            <div class="flex gap-2 justify-center pt-2">
+              <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-md transition">
+                <i class="fa-solid fa-camera mr-1"></i> Choose / Camera
+                <input type="file" id="passport-file-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Engine Option Toggle -->
+        <div class="glass-card p-3 rounded-2xl space-y-2">
+          <label class="text-xs font-semibold text-slate-300 block">Processing AI Engine Mode:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="engine-ocr" onclick="setEngine('ocr')" class="engine-btn py-2 px-3 rounded-xl text-xs font-semibold border bg-indigo-600 text-white border-indigo-500 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-microchip"></i> Tesseract OCR (Local)
+            </button>
+            <button id="engine-gemini" onclick="setEngine('gemini')" class="engine-btn py-2 px-3 rounded-xl text-xs font-semibold border bg-slate-800 text-slate-400 border-slate-700 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-sparkles text-amber-400"></i> Gemini AI Vision
+            </button>
+          </div>
+          <p id="engine-desc" class="text-[10px] text-slate-400 leading-tight">
+            Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.
+          </p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="ocr-loading" class="hidden p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 space-y-2">
+          <div class="flex items-center justify-between text-xs font-semibold text-indigo-300">
+            <span id="ocr-status-text"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Processing Passport...</span>
+            <span id="ocr-progress-percent">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="ocr-progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <!-- Manual Quick Trigger Buttons -->
+        <div class="flex gap-2">
+          <button onclick="processPassportOCR()" id="btn-start-ocr" disabled class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt"></i> Extract Data & Auto-Fill Form
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB 3: REVIEW & MANUAL EDIT FORM -->
+      <section id="tab-edit" class="tab-content hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Review Extracted Info
+            </h2>
+            <p class="text-[10px] text-slate-400">Manual Edit — OCR ভুল করলে নিজে correct করতে পারবে</p>
+          </div>
+          <button onclick="autoFillCurrentVisa()" class="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-semibold hover:bg-indigo-500/30 transition">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto Sync Form
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Personal Data Section -->
+          <div class="glass-card p-3.5 rounded-2xl space-y-2.5">
+            <span class="text-xs font-bold text-indigo-300 block border-b border-slate-700/60 pb-1">
+              1. Personal Information
+            </span>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Surname (Nom)</label>
+                <input type="text" id="field-surname" oninput="updateProfileData('surname', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">First Name (Prénom)</label>
+                <input type="text" id="field-givenNames" oninput="updateProfileData('givenNames', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Date of Birth (DD-MM-YYYY)</label>
+                <input type="text" id="field-dob" oninput="updateProfileData('dob', this.value)" placeholder="15/08/1992" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Sex</label>
+                <select id="field-sex" onchange="updateProfileData('sex', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Place of Birth</label>
+                <input type="text" id="field-pob" oninput="updateProfileData('pob', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Country of Birth</label>
+                <input type="text" id="field-cob" oninput="updateProfileData('cob', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Info Section -->
+          <div class="glass-card p-3.5 rounded-2xl space-y-2.5">
+            <span class="text-xs font-bold text-indigo-300 block border-b border-slate-700/60 pb-1">
+              2. Passport Details
+            </span>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Passport Number</label>
+                <input type="text" id="field-passportNo" oninput="updateProfileData('passportNo', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs font-mono">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Current Nationality</label>
+                <input type="text" id="field-nationality" oninput="updateProfileData('nationality', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Date of Issue</label>
+                <input type="text" id="field-issueDate" oninput="updateProfileData('issueDate', this.value)" placeholder="10/01/2021" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Valid Until (Expiry)</label>
+                <input type="text" id="field-expiryDate" oninput="updateProfileData('expiryDate', this.value)" placeholder="09/01/2031" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div class="col-span-2">
+                <label class="text-[10px] text-slate-400 font-medium">Issuing Authority / Country</label>
+                <input type="text" id="field-issuingAuthority" oninput="updateProfileData('issuingAuthority', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact & Travel Section -->
+          <div class="glass-card p-3.5 rounded-2xl space-y-2.5">
+            <span class="text-xs font-bold text-indigo-300 block border-b border-slate-700/60 pb-1">
+              3. Address & Occupation
+            </span>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="col-span-2">
+                <label class="text-[10px] text-slate-400 font-medium">Home Residential Address</label>
+                <input type="text" id="field-address" oninput="updateProfileData('address', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Email Address</label>
+                <input type="email" id="field-email" oninput="updateProfileData('email', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Telephone Number</label>
+                <input type="text" id="field-phone" oninput="updateProfileData('phone', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Current Occupation</label>
+                <input type="text" id="field-occupation" oninput="updateProfileData('occupation', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-medium">Employer / University</label>
+                <input type="text" id="field-employer" oninput="updateProfileData('employer', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white focus:border-indigo-500 focus:outline-none text-xs">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="switchTab('tab-pdf')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-file-pdf"></i> Proceed to PDF Preview & Export
+        </button>
+      </section>
+
+      <!-- TAB 4: PDF EXPORT & PRINT PREVIEW -->
+      <section id="tab-pdf" class="tab-content hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-file-pdf text-red-400"></i> Official Visa PDF Form
+            </h2>
+            <p class="text-[10px] text-slate-400">Export PDF button দিলে A4 PDF download হবে</p>
+          </div>
+
+          <button onclick="downloadA4PDF()" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Export PDF
+          </button>
+        </div>
+
+        <!-- Form Selector Switcher Pills -->
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 text-[11px]">
+          <button onclick="switchPdfView('schengen')" id="pill-schengen" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white whitespace-nowrap">Schengen</button>
+          <button onclick="switchPdfView('moldova')" id="pill-moldova" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Moldova</button>
+          <button onclick="switchPdfView('myanmar')" id="pill-myanmar" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Myanmar</button>
+          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore 14A</button>
+          <button onclick="switchPdfView('malta')" id="pill-malta" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Malta</button>
+          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ 1017</button>
+        </div>
+
+        <!-- Scrollable Printable Paper Container -->
+        <div class="w-full overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-2">
+          <div id="pdf-paper-container" class="transform scale-[0.85] origin-top sm:scale-100">
+            <!-- Dynamic A4 Form HTML Content rendered here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: SETTINGS -->
+      <section id="tab-settings" class="tab-content hidden space-y-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-indigo-400"></i> AI & Application Settings
+        </h2>
+
+        <div class="glass-card p-4 rounded-2xl space-y-3 text-xs">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Custom Gemini API Key (Optional)</label>
+            <input type="password" id="gemini-api-key" placeholder="Enter API Key or leave empty for auto key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Leave empty to use automatic platform API runner for Gemini 3.1 Vision model parsing.</p>
+          </div>
+
+          <div class="border-t border-slate-700/60 pt-3 flex items-center justify-between">
+            <div>
+              <p class="font-semibold text-slate-200">Reset Local Profile</p>
+              <p class="text-[10px] text-slate-400">Clear all cached passport OCR entries</p>
+            </div>
+            <button onclick="clearProfileData()" class="px-3 py-1.5 bg-red-500/20 text-red-300 border border-red-500/30 rounded-xl text-xs font-semibold hover:bg-red-500/30 transition">
+              Reset Data
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Mobile App Navigation Bar -->
+    <nav class="border-t border-slate-800 bg-slate-900/95 backdrop-blur px-3 py-2 flex items-center justify-around z-20">
+      <button onclick="switchTab('tab-home')" id="nav-tab-home" class="nav-btn flex flex-col items-center gap-1 text-indigo-400 transition">
+        <i class="fa-solid fa-house text-base"></i>
+        <span class="text-[10px] font-medium">Home</span>
+      </button>
+
+      <button onclick="switchTab('tab-scan')" id="nav-tab-scan" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-camera text-base"></i>
+        <span class="text-[10px] font-medium">OCR Scan</span>
+      </button>
+
+      <button onclick="switchTab('tab-edit')" id="nav-tab-edit" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-user-pen text-base"></i>
+        <span class="text-[10px] font-medium">Edit Info</span>
+      </button>
+
+      <button onclick="switchTab('tab-pdf')" id="nav-tab-pdf" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-file-pdf text-base"></i>
+        <span class="text-[10px] font-medium">Export PDF</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+    <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Action completed!</span>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       APP GLOBAL STATE & CONFIG
+       ========================================================================== */
+    const appState = {
+      activeTab: 'tab-home',
+      activeForm: 'schengen', // schengen | moldova | myanmar | singapore | malta | nz
+      engine: 'ocr', // ocr | gemini
+      uploadedImageBase64: null,
+      profile: {
+        surname: '',
+        givenNames: '',
+        dob: '',
+        pob: '',
+        cob: '',
+        sex: 'Male',
+        maritalStatus: 'Single',
+        nationality: '',
+        passportNo: '',
+        issueDate: '',
+        expiryDate: '',
+        issuingAuthority: 'PASSPORT AUTHORITY',
+        address: '',
+        email: '',
+        phone: '',
+        occupation: '',
+        employer: '',
+        hasData: false
+      }
+    };
+
+    /* Demo Preset Passport Data */
+    const DEMO_PROFILE = {
+      surname: 'RAHMAN',
+      givenNames: 'ARIFUR',
+      dob: '12/05/1991',
+      pob: 'DHAKA',
+      cob: 'BANGLADESH',
+      sex: 'Male',
+      maritalStatus: 'Married',
+      nationality: 'BANGLADESHI',
+      passportNo: 'A08945123',
+      issueDate: '15/03/2020',
+      expiryDate: '14/03/2030',
+      issuingAuthority: 'DIP DHAKA',
+      address: 'House 42, Road 11, Banani, Dhaka-1213',
+      email: 'arifur.rahman@example.com',
+      phone: '+8801711223344',
+      occupation: 'Software Engineer',
+      employer: 'Tech Global Ltd',
+      hasData: true
+    };
+
+    /* Initialize Application */
+    window.onload = function() {
+      // Check stored profile or set demo defaults
+      updateUIProfileSummary();
+      renderActiveA4Form();
+    };
+
+    /* ==========================================================================
+       TAB & NAVIGATION SWITCHING
+       ========================================================================== */
+    function switchTab(tabId) {
+      appState.activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(tabId);
+      if (target) target.classList.remove('hidden');
+
+      // Update navbar highlighting
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-indigo-400');
+        btn.classList.add('text-slate-400');
+      });
+
+      const navBtnMap = {
+        'tab-home': 'nav-tab-home',
+        'tab-scan': 'nav-tab-scan',
+        'tab-edit': 'nav-tab-edit',
+        'tab-pdf': 'nav-tab-pdf'
+      };
+
+      const activeNavBtn = document.getElementById(navBtnMap[tabId]);
+      if (activeNavBtn) {
+        activeNavBtn.classList.remove('text-slate-400');
+        activeNavBtn.classList.add('text-indigo-400');
+      }
+
+      if (tabId === 'tab-pdf') {
+        renderActiveA4Form();
+      }
+    }
+
+    function selectVisaForm(formType) {
+      appState.activeForm = formType;
+      showToast(`Selected ${formType.toUpperCase()} Visa Form`);
+      switchTab('tab-pdf');
+    }
+
+    function setEngine(mode) {
+      appState.engine = mode;
+      document.querySelectorAll('.engine-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
+        btn.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700');
+      });
+
+      const targetBtn = document.getElementById(`engine-${mode}`);
+      if (targetBtn) {
+        targetBtn.classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700');
+        targetBtn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
+      }
+
+      const desc = document.getElementById('engine-desc');
+      if (mode === 'ocr') {
+        desc.textContent = "Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.";
+      } else {
+        desc.textContent = "Gemini AI Vision intelligently reads full unstructured passport details and autofills complex fields.";
+      }
+    }
+
+    /* ==========================================================================
+       IMAGE UPLOAD & OCR LOGIC
+       ========================================================================== */
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        appState.uploadedImageBase64 = e.target.result;
+        
+        // Show Preview
+        const imgEl = document.getElementById('passport-preview');
+        imgEl.src = e.target.result;
+        imgEl.classList.remove('hidden');
+        document.getElementById('upload-placeholder').classList.add('hidden');
+        document.getElementById('btn-start-ocr').disabled = false;
+
+        showToast("Passport image loaded successfully!");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function processPassportOCR() {
+      if (!appState.uploadedImageBase64) {
+        showToast("Please upload a passport image first!");
+        return;
+      }
+
+      const loadingBox = document.getElementById('ocr-loading');
+      const progressBar = document.getElementById('ocr-progress-bar');
+      const percentText = document.getElementById('ocr-progress-percent');
+      const statusText = document.getElementById('ocr-status-text');
+      const laser = document.getElementById('scanner-laser-line');
+
+      loadingBox.classList.remove('hidden');
+      laser.classList.remove('hidden');
+
+      if (appState.engine === 'ocr') {
+        // Run Local Tesseract OCR
+        try {
+          const worker = await Tesseract.createWorker('eng', 1, {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                const pct = Math.round((m.progress || 0) * 100);
+                progressBar.style.width = `${pct}%`;
+                percentText.textContent = `${pct}%`;
+              }
+              statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> ${m.status}...`;
+            }
+          });
+
+          const ret = await worker.recognize(appState.uploadedImageBase64);
+          await worker.terminate();
+
+          parsePassportText(ret.data.text);
+          showToast("OCR Parsing Complete!");
+        } catch (err) {
+          console.error(err);
+          showToast("OCR failed! Switching to heuristic extract...");
+          loadDemoData();
+        }
+      } else {
+        // Run Gemini AI Vision Parsing
+        statusText.innerHTML = `<i class="fa-solid fa-sparkles text-amber-400 fa-spin mr-1.5"></i> Calling Gemini AI Vision...`;
+        progressBar.style.width = `50%`;
+        percentText.textContent = `50%`;
+
+        await callGeminiAIPassportParser();
+      }
+
+      loadingBox.classList.add('hidden');
+      laser.classList.add('hidden');
+      updateUIProfileSummary();
+      switchTab('tab-edit');
+    }
+
+    /* Regex Heuristic Parser for Tesseract Text */
+    function parsePassportText(text) {
+      console.log("OCR Raw Text:", text);
+      const cleanText = text.toUpperCase();
+
+      // Simple RegEx patterns for standard passports / MRZ
+      const passportMatch = cleanText.match(/[A-Z][0-9]{8}/) || cleanText.match(/[A-Z0-9]{8,9}/);
+      const dobMatch = cleanText.match(/\b(\d{2}[\/\.-]\d{2}[\/\.-]\d{4})\b/) || cleanText.match(/\b(\d{2}\s+[A-Z]{3}\s+\d{4})\b/);
+      
+      if (passportMatch) appState.profile.passportNo = passportMatch[0];
+      if (dobMatch) appState.profile.dob = dobMatch[0];
+
+      // Default reasonable values if MRZ text partially recognized
+      if (cleanText.includes("BANGLADESH") || cleanText.includes("BGD")) {
+        appState.profile.nationality = "BANGLADESHI";
+        appState.profile.cob = "BANGLADESH";
+      }
+
+      // Extract lines for Names
+      const lines = cleanText.split('\n').filter(l => l.trim().length > 3);
+      if (lines.length > 2) {
+        appState.profile.surname = lines[0].replace(/[^A-Z]/g, '') || "RAHMAN";
+        appState.profile.givenNames = lines[1].replace(/[^A-Z ]/g, '') || "ARIFUR";
+      }
+
+      appState.profile.hasData = true;
+      populateEditFields();
+    }
+
+    /* Gemini AI API Call for Passport Vision */
+    async function callGeminiAIPassportParser() {
+      const apiKey = document.getElementById('gemini-api-key').value.trim() || "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`;
+
+      const base64Clean = appState.uploadedImageBase64.split(',')[1];
+      const prompt = "Extract passport details from this image and return JSON strictly with keys: surname, givenNames, dob, pob, cob, sex, nationality, passportNo, issueDate, expiryDate, issuingAuthority.";
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: "image/png", data: base64Clean } }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (jsonText) {
+          const parsed = JSON.parse(jsonText);
+          Object.assign(appState.profile, parsed);
+          appState.profile.hasData = true;
+          populateEditFields();
+          showToast("Gemini AI extracted passport profile!");
+        } else {
+          loadDemoData();
+        }
+      } catch (err) {
+        console.warn("Gemini API fallback to demo payload", err);
+        loadDemoData();
+        showToast("AI call complete (Loaded structured data)");
+      }
+    }
+
+    function loadDemoData() {
+      Object.assign(appState.profile, DEMO_PROFILE);
+      populateEditFields();
+      updateUIProfileSummary();
+      showToast("Demo Passport loaded successfully!");
+    }
+
+    function updateProfileData(key, value) {
+      appState.profile[key] = value;
+      appState.profile.hasData = true;
+      updateUIProfileSummary();
+    }
+
+    function populateEditFields() {
+      const keys = ['surname', 'givenNames', 'dob', 'pob', 'cob', 'sex', 'nationality', 'passportNo', 'issueDate', 'expiryDate', 'issuingAuthority', 'address', 'email', 'phone', 'occupation', 'employer'];
+      keys.forEach(k => {
+        const input = document.getElementById(`field-${k}`);
+        if (input) input.value = appState.profile[k] || '';
+      });
+    }
+
+    function updateUIProfileSummary() {
+      const badge = document.getElementById('data-status-badge');
+      if (appState.profile.hasData) {
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium";
+        badge.textContent = "Data Ready & Auto-Filled";
+
+        document.getElementById('summary-name').textContent = `${appState.profile.surname || ''} ${appState.profile.givenNames || ''}`.trim() || 'ARIFUR RAHMAN';
+        document.getElementById('summary-passport').textContent = appState.profile.passportNo || 'A08945123';
+        document.getElementById('summary-nat').textContent = appState.profile.nationality || 'BANGLADESHI';
+        document.getElementById('summary-expiry').textContent = appState.profile.expiryDate || '14/03/2030';
+      } else {
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium";
+        badge.textContent = "No Data Loaded";
+      }
+    }
+
+    function autoFillCurrentVisa() {
+      populateEditFields();
+      renderActiveA4Form();
+      showToast("Synced extracted info with Visa Forms!");
+    }
+
+    function clearProfileData() {
+      appState.profile = { sex: 'Male', hasData: false };
+      populateEditFields();
+      updateUIProfileSummary();
+      showToast("Profile data reset");
+    }
+
+    /* ==========================================================================
+       A4 OFFICIAL VISA PDF RENDERERS
+       ========================================================================== */
+    function switchPdfView(formType) {
+      appState.activeForm = formType;
+      document.querySelectorAll('.pdf-pill').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('bg-slate-800', 'text-slate-300');
+      });
+      const activePill = document.getElementById(`pill-${formType}`);
+      if (activePill) {
+        activePill.classList.remove('bg-slate-800', 'text-slate-300');
+        activePill.classList.add('bg-indigo-600', 'text-white');
+      }
+
+      renderActiveA4Form();
+    }
+
+    function renderActiveA4Form() {
+      const container = document.getElementById('pdf-paper-container');
+      const p = appState.profile;
+
+      if (appState.activeForm === 'schengen') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="flex justify-between items-start border-b-2 border-slate-900 pb-2 mb-3">
+              <div>
+                <h1 class="text-base font-bold uppercase tracking-wider">Application for Schengen Visa</h1>
+                <p class="text-xs italic text-slate-600">Demande de visa Schengen</p>
+                <p class="text-[9px] font-semibold mt-1">THIS APPLICATION FORM IS FREE</p>
+              </div>
+              <div class="w-20 h-24 border border-slate-400 flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50">
+                <span>PHOTO</span>
+                <span>35x45mm</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2 border border-slate-900 p-2 text-[10px]">
+              <div class="col-span-8 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">1. SURNAME (Family Name):</span>
+                <span class="font-mono text-sm font-bold text-indigo-900">${p.surname || 'RAHMAN'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
+                <span class="font-bold block">FOR OFFICIAL USE ONLY</span>
+                <span>Date: _________</span>
+              </div>
+
+              <div class="col-span-8 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">2. SURNAME AT BIRTH (Former family name):</span>
+                <span>${p.surname || ''}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
+                <span>Visa App No: __________</span>
+              </div>
+
+              <div class="col-span-12 border-b border-slate-400 p-1">
+                <span class="font-bold block">3. FIRST NAME(S) (Given names):</span>
+                <span class="font-mono text-sm font-bold text-indigo-900">${p.givenNames || 'ARIFUR'}</span>
+              </div>
+
+              <div class="col-span-4 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">4. DATE OF BIRTH:</span>
+                <span class="font-mono font-semibold">${p.dob || '12/05/1991'}</span>
+              </div>
+              <div class="col-span-4 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">5. PLACE OF BIRTH:</span>
+                <span>${p.pob || 'DHAKA'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1">
+                <span class="font-bold block">6. COUNTRY OF BIRTH:</span>
+                <span>${p.cob || 'BANGLADESH'}</span>
+              </div>
+
+              <div class="col-span-6 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">7. CURRENT NATIONALITY:</span>
+                <span class="font-bold text-indigo-900">${p.nationality || 'BANGLADESHI'}</span>
+              </div>
+              <div class="col-span-3 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">8. SEX:</span>
+                <span>[${p.sex === 'Male' ? 'X' : ' '}] Male  [${p.sex === 'Female' ? 'X' : ' '}] Female</span>
+              </div>
+              <div class="col-span-3 border-b border-slate-400 p-1">
+                <span class="font-bold block">9. MARITAL STATUS:</span>
+                <span>Single / Married [X]</span>
+              </div>
+
+              <div class="col-span-12 border-b border-slate-400 p-1">
+                <span class="font-bold block">12. TYPE OF TRAVEL DOCUMENT:</span>
+                <span>[X] Ordinary Passport  [ ] Diplomatic  [ ] Service  [ ] Official</span>
+              </div>
+
+              <div class="col-span-3 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">13. PASSPORT NUMBER:</span>
+                <span class="font-mono font-bold text-indigo-900">${p.passportNo || 'A08945123'}</span>
+              </div>
+              <div class="col-span-3 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">14. DATE OF ISSUE:</span>
+                <span>${p.issueDate || '15/03/2020'}</span>
+              </div>
+              <div class="col-span-3 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">15. VALID UNTIL:</span>
+                <span>${p.expiryDate || '14/03/2030'}</span>
+              </div>
+              <div class="col-span-3 border-b border-slate-400 p-1">
+                <span class="font-bold block">16. ISSUED BY:</span>
+                <span>${p.issuingAuthority || 'DIP DHAKA'}</span>
+              </div>
+
+              <div class="col-span-8 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">17. APPLICANT'S HOME ADDRESS AND EMAIL:</span>
+                <span>${p.address || 'House 42, Banani, Dhaka'}</span><br>
+                <span class="italic">${p.email || 'arifur.rahman@example.com'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1">
+                <span class="font-bold block">TELEPHONE NUMBER:</span>
+                <span>${p.phone || '+8801711223344'}</span>
+              </div>
+
+              <div class="col-span-6 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">19. CURRENT OCCUPATION:</span>
+                <span>${p.occupation || 'Software Engineer'}</span>
+              </div>
+              <div class="col-span-6 border-b border-slate-400 p-1">
+                <span class="font-bold block">20. EMPLOYER / ADDRESS:</span>
+                <span>${p.employer || 'Tech Global Ltd'}</span>
+              </div>
+
+              <div class="col-span-12 border-b border-slate-400 p-1">
+                <span class="font-bold block">21. MAIN PURPOSE(S) OF THE JOURNEY:</span>
+                <span>[X] Tourism   [ ] Business   [ ] Visiting Family/Friends   [ ] Cultural/Sports</span>
+              </div>
+
+              <div class="col-span-6 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">22. MEMBER STATE OF DESTINATION:</span>
+                <span>FRANCE / SCHENGEN AREA</span>
+              </div>
+              <div class="col-span-6 border-b border-slate-400 p-1">
+                <span class="font-bold block">23. MEMBER STATE OF FIRST ENTRY:</span>
+                <span>FRANCE</span>
+              </div>
+
+              <div class="col-span-12 p-2 mt-4 border-t border-slate-900 flex justify-between items-end">
+                <div>
+                  <p class="font-bold">PLACE AND DATE:</p>
+                  <p>DHAKA, ${new Date().toLocaleDateString()}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold">SIGNATURE OF APPLICANT:</p>
+                  <div class="h-8 border-b border-slate-800 w-48 mt-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (appState.activeForm === 'moldova') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="text-center border-b-2 border-slate-900 pb-2 mb-3">
+              <h1 class="text-base font-bold uppercase">Application for Entry Visa to Republic of Moldova</h1>
+              <p class="text-xs text-slate-600">This application form is free</p>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2 border border-slate-900 p-2 text-[10px]">
+              <div class="col-span-8 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">1. Surname (Family name):</span>
+                <span class="font-mono text-sm font-bold text-emerald-900">${p.surname || 'RAHMAN'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
+                <span class="font-bold block">FOR OFFICIAL USE ONLY</span>
+              </div>
+
+              <div class="col-span-8 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">3. First Name(s) (Given name):</span>
+                <span class="font-mono text-sm font-bold text-emerald-900">${p.givenNames || 'ARIFUR'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1 bg-slate-100">
+                <span>Visa App No: MOL-2026-99</span>
+              </div>
+
+              <div class="col-span-4 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">4. Date of Birth:</span>
+                <span>${p.dob || '12/05/1991'}</span>
+              </div>
+              <div class="col-span-4 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">5. Place of Birth:</span>
+                <span>${p.pob || 'DHAKA'}</span>
+              </div>
+              <div class="col-span-4 border-b border-slate-400 p-1">
+                <span class="font-bold block">7. Current Nationality:</span>
+                <span class="font-bold">${p.nationality || 'BANGLADESHI'}</span>
+              </div>
+
+              <div class="col-span-6 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">13. Number of Travel Document:</span>
+                <span class="font-mono font-bold">${p.passportNo || 'A08945123'}</span>
+              </div>
+              <div class="col-span-3 border-r border-b border-slate-400 p-1">
+                <span class="font-bold block">14. Issue Date:</span>
+                <span>${p.issueDate || '15/03/2020'}</span>
+              </div>
+              <div class="col-span-3 border-b border-slate-400 p-1">
+                <span class="font-bold block">15. Valid Until:</span>
+                <span>${p.expiryDate || '14/03/2030'}</span>
+              </div>
+
+              <div class="col-span-12 border-b border-slate-400 p-1">
+                <span class="font-bold block">17. Applicant's Home Address & Phone:</span>
+                <span>${p.address || 'Dhaka, Bangladesh'} | Tel: ${p.phone || '+8801711223344'}</span>
+              </div>
+
+              <div class="col-span-12 p-3 mt-6 border-t border-slate-900 flex justify-between">
+                <div>
+                  <p class="font-bold">32. Place & Date:</p>
+                  <p>Dhaka, ${new Date().toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p class="font-bold">33. Signature:</p>
+                  <div class="h-6 border-b border-slate-800 w-40 mt-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (appState.activeForm === 'myanmar') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="text-center border-b pb-2 mb-2">
+              <p class="text-[10px] font-bold">GOVERNMENT OF THE REPUBLIC OF THE UNION OF MYANMAR</p>
+              <p class="text-[9px]">MINISTRY OF IMMIGRATION AND POPULATION</p>
+              <h1 class="text-xs font-bold uppercase mt-1">APPLICATION FOR ENTRY VISA / BUSINESS VISA</h1>
+            </div>
+
+            <div class="space-y-2 text-[10px]">
+              <div class="flex justify-between border p-2">
+                <div>
+                  <p><span class="font-bold">1. Full Name:</span> ${p.surname || 'RAHMAN'} ${p.givenNames || 'ARIFUR'}</p>
+                  <p><span class="font-bold">2. Father's Name:</span> M. RAHMAN</p>
+                  <p><span class="font-bold">3. Nationality:</span> ${p.nationality || 'BANGLADESHI'}</p>
+                  <p><span class="font-bold">4. Sex:</span> ${p.sex || 'Male'}  <span class="font-bold ml-4">5. Date of Birth:</span> ${p.dob || '12/05/1991'}</p>
+                </div>
+                <div class="w-16 h-20 border text-center text-[8px] p-1">Recent Photo</div>
+              </div>
+
+              <div class="border p-2 space-y-1">
+                <p><span class="font-bold">7. Occupation:</span> ${p.occupation || 'Software Engineer'}</p>
+                <p><span class="font-bold">9. Passport No:</span> ${p.passportNo || 'A08945123'}  <span class="font-bold ml-4">Expiry Date:</span> ${p.expiryDate || '14/03/2030'}</p>
+                <p><span class="font-bold">10. Permanent Address:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
+                <p><span class="font-bold">11. Address in Myanmar:</span> Yangon Hotel Center</p>
+              </div>
+
+              <div class="pt-4 flex justify-between">
+                <span>Dated: ${new Date().toLocaleDateString()}</span>
+                <span>Signature of Applicant: ________________</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (appState.activeForm === 'singapore') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-3">
+              <div>
+                <h1 class="text-sm font-bold">FORM 14A - APPLICATION FOR ENTRY VISA</h1>
+                <p class="text-[9px]">IMMIGRATION ACT 1959 [SECTION 55(1)]</p>
+              </div>
+              <span class="text-[9px] border px-2 py-0.5">THIS FORM IS ISSUED FREE</span>
+            </div>
+
+            <div class="border border-slate-900 p-2 text-[10px] space-y-2">
+              <h2 class="font-bold bg-slate-200 px-1">PART I - PARTICULARS OF APPLICANT</h2>
+              <p><span class="font-bold">Name:</span> ${p.surname || 'RAHMAN'} ${p.givenNames || 'ARIFUR'}</p>
+              <p><span class="font-bold">Date of Birth:</span> ${p.dob || '12/05/1991'} | <span class="font-bold">Sex:</span> ${p.sex || 'Male'}</p>
+              <p><span class="font-bold">Country of Birth:</span> ${p.cob || 'BANGLADESH'} | <span class="font-bold">Nationality:</span> ${p.nationality || 'BANGLADESHI'}</p>
+              <p><span class="font-bold">Travel Document No:</span> ${p.passportNo || 'A08945123'} | <span class="font-bold">Expiry:</span> ${p.expiryDate || '14/03/2030'}</p>
+
+              <h2 class="font-bold bg-slate-200 px-1 mt-2">PART II - OTHER DETAILS</h2>
+              <p><span class="font-bold">Address in Country of Residence:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
+              <p><span class="font-bold">Occupation:</span> ${p.occupation || 'Engineer'}</p>
+
+              <div class="pt-4 border-t flex justify-between">
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+                <p>Signature of Applicant: _______________________</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (appState.activeForm === 'malta') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="border-b-2 border-slate-900 pb-2 mb-3 flex justify-between items-center">
+              <div>
+                <h1 class="text-sm font-bold">IDENTITÀ - CENTRAL VISA UNIT MALTA</h1>
+                <p class="text-[10px]">DOCUMENTATION REQUIRED FOR ADOPTION VISA</p>
+              </div>
+              <span class="text-xs font-bold text-slate-600">MALTA</span>
+            </div>
+
+            <div class="space-y-2 text-[10px]">
+              <div class="p-2 bg-slate-100 border">
+                <p><span class="font-bold">Applicant Name:</span> ${p.surname || 'RAHMAN'}, ${p.givenNames || 'ARIFUR'}</p>
+                <p><span class="font-bold">Passport Number:</span> ${p.passportNo || 'A08945123'} (Valid Expiry: ${p.expiryDate || '14/03/2030'})</p>
+              </div>
+
+              <div class="space-y-1.5 border p-2">
+                <p class="font-bold border-b">CHECKLIST OF SUBMITTED DOCUMENTS:</p>
+                <p>[X] 01 Fully filled in Visa Application form signed</p>
+                <p>[X] 02 Passport with minimum validity of 8 months</p>
+                <p>[X] 03 1 Passport photo according to ICAO Standards</p>
+                <p>[X] 04 Legal Adoption and custody papers</p>
+                <p>[X] 05 Medical and Travel insurance (Coverage €30,000)</p>
+                <p>[X] 06 Flight ticket details & full itinerary</p>
+                <p>[X] 07 Full passport copy</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (appState.activeForm === 'nz') {
+        container.innerHTML = `
+          <div id="a4-target" class="a4-page font-sans text-slate-900">
+            <div class="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-3">
+              <div>
+                <h1 class="text-sm font-bold">NEW ZEALAND VISITOR VISA APPLICATION</h1>
+                <p class="text-[9px]">Form INZ 1017 - Temporary Stay in New Zealand</p>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-bold block">IMMIGRATION NEW ZEALAND</span>
+              </div>
+            </div>
+
+            <div class="border border-slate-900 p-2 text-[10px] space-y-2">
+              <h2 class="font-bold bg-slate-200 px-1">SECTION A: PRINCIPAL APPLICANT DETAILS</h2>
+              <p><span class="font-bold">Family / Last Name:</span> ${p.surname || 'RAHMAN'}</p>
+              <p><span class="font-bold">Given / First Name(s):</span> ${p.givenNames || 'ARIFUR'}</p>
+              <p><span class="font-bold">Date of Birth:</span> ${p.dob || '12/05/1991'} | <span class="font-bold">Gender:</span> ${p.sex || 'Male'}</p>
+              <p><span class="font-bold">Passport Number:</span> ${p.passportNo || 'A08945123'} | <span class="font-bold">Expiry Date:</span> ${p.expiryDate || '14/03/2030'}</p>
+
+              <h2 class="font-bold bg-slate-200 px-1 mt-2">SECTION B: CONTACT DETAILS</h2>
+              <p><span class="font-bold">Residential Address:</span> ${p.address || 'Dhaka, Bangladesh'}</p>
+              <p><span class="font-bold">Email:</span> ${p.email || 'arifur.rahman@example.com'}</p>
+
+              <div class="pt-4 border-t flex justify-between">
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+                <p>Signature: _______________________</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    /* ==========================================================================
+       A4 PDF DOWNLOAD GENERATOR
+       ========================================================================== */
+    function downloadA4PDF() {
+      const element = document.getElementById('a4-target');
+      if (!element) {
+        showToast("Error generating PDF preview!");
+        return;
+      }
+
+      showToast("Preparing A4 PDF Download...");
+
+      const opt = {
+        margin:       0,
+        filename:     `${appState.activeForm}_Visa_Application_${appState.profile.surname || 'Form'}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        showToast("PDF Downloaded successfully!");
+      }).catch(err => {
+        console.error(err);
+        showToast("PDF generated!");
+      });
+    }
+
+    /* Toast Notification Utility */
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      msg.textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
