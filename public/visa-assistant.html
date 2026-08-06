@@ -492,36 +492,43 @@
         <!-- Zoom Controls -->
         <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card">
           <div class="flex items-center gap-1.5 min-w-0">
-            <div class="w-7 h-7 rounded-lg bg-red-500/20 text-red-300 grid place-items-center shrink-0">
-              <i class="fa-solid fa-file-pdf text-[11px]"></i>
-            </div>
+            <button onclick="toggleThumbs()" id="thumbs-toggle" aria-label="Toggle PDF thumbnail sidebar" aria-expanded="false" aria-controls="pdf-thumbs" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition shrink-0">
+              <i class="fa-solid fa-table-cells-large text-[11px]" aria-hidden="true"></i>
+            </button>
             <div class="min-w-0">
               <p id="pdf-active-name" class="text-[11px] font-bold text-white truncate">Schengen Visa</p>
               <p class="text-[9px] text-slate-400 truncate">Official PDF · Real Form</p>
             </div>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out">
-              <i class="fa-solid fa-minus text-xs"></i>
+          <div class="flex items-center gap-1 shrink-0" role="group" aria-label="PDF zoom controls">
+            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out (keyboard shortcut minus)" accesskey="-">
+              <i class="fa-solid fa-minus text-xs" aria-hidden="true"></i>
             </button>
-            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center">100%</span>
-            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in">
-              <i class="fa-solid fa-plus text-xs"></i>
+            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center" role="status" aria-live="polite" aria-atomic="true">100%</span>
+            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in (keyboard shortcut plus)">
+              <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
             </button>
-            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom">
-              <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom to 100% (keyboard shortcut 0)">
+              <i class="fa-solid fa-arrows-rotate text-[10px]" aria-hidden="true"></i>
+            </button>
+            <button onclick="toggleFullscreen()" id="fs-btn" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Toggle full-screen PDF view (keyboard shortcut F)">
+              <i class="fa-solid fa-expand text-[11px]" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        <!-- Real PDF Viewer -->
-        <div class="w-full rounded-2xl border border-slate-800 bg-slate-950 overflow-auto no-scrollbar" style="height: 60vh; min-height: 380px;">
-          <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
-            <iframe id="pdf-frame" src="" title="Official Visa PDF" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+        <!-- Real PDF Viewer + Thumbnail Sidebar -->
+        <div id="pdf-stage" class="w-full flex gap-2 rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden" style="height: 60vh; min-height: 380px;">
+          <aside id="pdf-thumbs" class="hidden w-[78px] shrink-0 overflow-y-auto no-scrollbar border-r border-slate-800 p-1.5 space-y-1.5" aria-label="PDF thumbnails" role="tablist" aria-orientation="vertical"></aside>
+          <div id="pdf-scroll" class="flex-1 overflow-auto no-scrollbar touch-none" tabindex="0" role="document" aria-label="PDF document viewer. Use plus and minus to zoom, arrow up and down to switch documents, F for full screen, D to download.">
+            <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
+              <iframe id="pdf-frame" src="" title="Official Visa PDF document" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+            </div>
           </div>
         </div>
 
-        <p class="text-[10px] text-slate-500 text-center px-2">Tap Download to save the official PDF, or the external icon to open in a new tab for print / share.</p>
+        <p class="text-[10px] text-slate-500 text-center px-2">Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+
       </section>
 
 
