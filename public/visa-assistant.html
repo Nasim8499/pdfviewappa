@@ -940,6 +940,11 @@
       nz:        'NZ_INZ_1017.pdf',
     };
 
+    const PDF_ORDER = ['schengen','moldova','myanmar','singapore','malta','nz'];
+    const LS_FORM = 'visaai.lastForm';
+    const LS_ZOOM = 'visaai.zoom';
+    const LS_THEME = 'visaai.theme';
+
     let pdfZoom = 1;
 
     function switchPdfView(formType) {
@@ -947,13 +952,24 @@
       document.querySelectorAll('.pdf-pill').forEach(btn => {
         btn.classList.remove('bg-indigo-600', 'text-white');
         btn.classList.add('bg-slate-800', 'text-slate-300');
+        btn.setAttribute('aria-pressed', 'false');
       });
       const activePill = document.getElementById(`pill-${formType}`);
       if (activePill) {
         activePill.classList.remove('bg-slate-800', 'text-slate-300');
         activePill.classList.add('bg-indigo-600', 'text-white');
+        activePill.setAttribute('aria-pressed', 'true');
       }
+      try { localStorage.setItem(LS_FORM, formType); } catch (e) {}
       renderActiveA4Form();
+      renderThumbs();
+    }
+
+    function stepPdf(dir) {
+      const i = PDF_ORDER.indexOf(appState.activeForm);
+      const next = PDF_ORDER[(i + dir + PDF_ORDER.length) % PDF_ORDER.length];
+      switchPdfView(next);
+      showToast(PDF_LABELS[next]);
     }
 
     function renderActiveA4Form() {
@@ -961,19 +977,50 @@
       const label = document.getElementById('pdf-active-name');
       if (!frame) return;
       const url = PDF_URLS[appState.activeForm] || PDF_URLS.schengen;
-      // #toolbar=0 hides native browser PDF toolbar for a cleaner premium look
       frame.src = url + '#toolbar=0&navpanes=0&view=FitH';
+      frame.title = (PDF_LABELS[appState.activeForm] || 'Visa') + ' official PDF document';
       if (label) label.textContent = PDF_LABELS[appState.activeForm] || 'Visa PDF';
-      resetZoom();
+      applyZoom();
     }
 
+    /* ---------- Thumbnail sidebar ---------- */
+    function toggleThumbs(force) {
+      const bar = document.getElementById('pdf-thumbs');
+      const btn = document.getElementById('thumbs-toggle');
+      if (!bar) return;
+      const show = typeof force === 'boolean' ? force : bar.classList.contains('hidden');
+      bar.classList.toggle('hidden', !show);
+      if (btn) btn.setAttribute('aria-expanded', String(show));
+      if (show) renderThumbs();
+    }
+
+    function renderThumbs() {
+      const bar = document.getElementById('pdf-thumbs');
+      if (!bar || bar.classList.contains('hidden')) return;
+      bar.innerHTML = PDF_ORDER.map(k => {
+        const active = k === appState.activeForm;
+        return `<button role="tab" aria-selected="${active}" aria-label="Open ${PDF_LABELS[k]}" onclick="switchPdfView('${k}')"
+          class="w-full rounded-xl overflow-hidden border ${active ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-700/70'} bg-white/5 block text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <span class="block h-[62px] overflow-hidden bg-white relative">
+            <iframe src="${PDF_URLS[k]}#toolbar=0&navpanes=0&view=FitH&page=1" title="" aria-hidden="true" tabindex="-1"
+              class="pointer-events-none border-0 bg-white" style="width:260px;height:340px;transform:scale(0.28);transform-origin:top left;"></iframe>
+          </span>
+          <span class="block px-1 py-1 text-[8px] font-semibold ${active ? 'text-indigo-300' : 'text-slate-400'} truncate">${PDF_LABELS[k]}</span>
+        </button>`;
+      }).join('');
+    }
+
+    /* ---------- Zoom ---------- */
     function zoomPdf(dir) {
-      pdfZoom = Math.min(2.5, Math.max(0.6, pdfZoom + dir * 0.15));
-      applyZoom();
+      setZoom(pdfZoom + dir * 0.15);
     }
     function resetZoom() {
-      pdfZoom = 1;
+      setZoom(1);
+    }
+    function setZoom(v) {
+      pdfZoom = Math.min(3, Math.max(0.5, v));
       applyZoom();
+      try { localStorage.setItem(LS_ZOOM, String(pdfZoom)); } catch (e) {}
     }
     function applyZoom() {
       const wrap = document.getElementById('pdf-viewer-wrap');
@@ -985,6 +1032,107 @@
       }
       if (label) label.textContent = `${Math.round(pdfZoom * 100)}%`;
     }
+
+    /* ---------- Full screen ---------- */
+    function toggleFullscreen() {
+      const stage = document.getElementById('pdf-stage');
+      const icon = document.querySelector('#fs-btn i');
+      if (!stage) return;
+      const isFs = stage.classList.toggle('pdf-fullscreen');
+      if (icon) icon.className = `fa-solid ${isFs ? 'fa-compress' : 'fa-expand'} text-[11px]`;
+      document.getElementById('fs-btn')?.setAttribute('aria-label', isFs ? 'Exit full-screen PDF view (Escape)' : 'Toggle full-screen PDF view (keyboard shortcut F)');
+      if (isFs) document.getElementById('pdf-scroll')?.focus();
+    }
+
+    /* ---------- Pinch to zoom ---------- */
+    function initPinch() {
+      const el = document.getElementById('pdf-scroll');
+      if (!el) return;
+      const pts = new Map();
+      let startDist = 0, startZoom = 1;
+      el.addEventListener('pointerdown', e => {
+        pts.set(e.pointerId, e);
+        if (pts.size === 2) {
+          const [a, b] = [...pts.values()];
+          startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          startZoom = pdfZoom;
+        }
+      });
+      el.addEventListener('pointermove', e => {
+        if (!pts.has(e.pointerId)) return;
+        pts.set(e.pointerId, e);
+        if (pts.size === 2 && startDist > 0) {
+          e.preventDefault();
+          const [a, b] = [...pts.values()];
+          const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          setZoom(startZoom * (d / startDist));
+        }
+      }, { passive: false });
+      const clear = e => { pts.delete(e.pointerId); if (pts.size < 2) startDist = 0; };
+      el.addEventListener('pointerup', clear);
+      el.addEventListener('pointercancel', clear);
+      el.addEventListener('wheel', e => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+        setZoom(pdfZoom * Math.exp(-dy * 0.0015));
+      }, { passive: false });
+    }
+
+    /* ---------- Theme ---------- */
+    function applyTheme(theme) {
+      const light = theme === 'light';
+      document.documentElement.classList.toggle('theme-light', light);
+      const icon = document.querySelector('#theme-btn i');
+      if (icon) icon.className = `fa-solid ${light ? 'fa-moon' : 'fa-sun'} text-xs`;
+      const btn = document.getElementById('theme-btn');
+      if (btn) {
+        btn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+        btn.setAttribute('aria-pressed', String(light));
+      }
+      try { localStorage.setItem(LS_THEME, theme); } catch (e) {}
+    }
+    function toggleTheme() {
+      applyTheme(document.documentElement.classList.contains('theme-light') ? 'dark' : 'light');
+    }
+
+    /* ---------- Keyboard shortcuts ---------- */
+    document.addEventListener('keydown', e => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (e.metaKey || e.altKey) return;
+      const stage = document.getElementById('pdf-stage');
+      const inPdf = appState.activeTab === 'tab-pdf';
+      if (e.key === 'Escape' && stage?.classList.contains('pdf-fullscreen')) { toggleFullscreen(); return; }
+      if (!inPdf) return;
+      switch (e.key) {
+        case '+': case '=': e.preventDefault(); zoomPdf(1); break;
+        case '-': case '_': e.preventDefault(); zoomPdf(-1); break;
+        case '0': e.preventDefault(); resetZoom(); break;
+        case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
+        case 'd': case 'D': if (!e.ctrlKey) { e.preventDefault(); downloadA4PDF(); } break;
+        case 'ArrowDown': case 'ArrowRight': e.preventDefault(); stepPdf(1); break;
+        case 'ArrowUp': case 'ArrowLeft': e.preventDefault(); stepPdf(-1); break;
+      }
+    });
+
+    /* ---------- Restore persisted session ---------- */
+    (function restoreSession() {
+      let theme = 'dark', form = null, zoom = null;
+      try {
+        theme = localStorage.getItem(LS_THEME) || 'dark';
+        form = localStorage.getItem(LS_FORM);
+        zoom = parseFloat(localStorage.getItem(LS_ZOOM) || '');
+      } catch (e) {}
+      const start = () => {
+        applyTheme(theme);
+        if (zoom && !isNaN(zoom)) pdfZoom = Math.min(3, Math.max(0.5, zoom));
+        if (form && PDF_URLS[form]) switchPdfView(form); else applyZoom();
+        initPinch();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+      else start();
+    })();
 
     function openPdfNewTab() {
       const url = PDF_URLS[appState.activeForm];
@@ -1004,6 +1152,7 @@
       a.remove();
       showToast('Downloading official PDF…');
     }
+
 
     /* Toast Notification Utility */
     function showToast(message) {
