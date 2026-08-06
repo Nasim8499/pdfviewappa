@@ -110,9 +110,13 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <button onclick="switchTab('tab-settings')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
-          <i class="fa-solid fa-gear text-xs"></i>
+        <button onclick="toggleTheme()" id="theme-btn" aria-label="Switch to light theme" aria-pressed="false" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
+          <i class="fa-solid fa-sun text-xs" aria-hidden="true"></i>
         </button>
+        <button onclick="switchTab('tab-settings')" aria-label="Open settings" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
+          <i class="fa-solid fa-gear text-xs" aria-hidden="true"></i>
+        </button>
+
       </div>
     </header>
 
