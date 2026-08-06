@@ -70,7 +70,60 @@
       100% { top: 0%; }
     }
 
+    /* ===== Full-screen PDF stage ===== */
+    #pdf-stage.pdf-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      height: 100dvh !important;
+      max-height: none;
+      width: 100vw;
+      border-radius: 0;
+    }
+
+    :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+      outline: 2px solid #818cf8;
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+
+    /* ===== Premium light theme (consistent remap of dark tokens) ===== */
+    html.theme-light { background: #eef1f7; color: #0f172a; }
+    html.theme-light body { background: #eef1f7; color: #0f172a; }
+    html.theme-light .bg-slate-950 { background-color: #eef1f7 !important; }
+    html.theme-light .bg-slate-900,
+    html.theme-light .bg-slate-900\/95,
+    html.theme-light .bg-slate-900\/90 { background-color: #ffffff !important; }
+    html.theme-light .bg-slate-800,
+    html.theme-light .bg-slate-800\/60 { background-color: #eef2f7 !important; }
+    html.theme-light .hover\:bg-slate-700:hover { background-color: #e2e8f0 !important; }
+    html.theme-light .border-slate-800,
+    html.theme-light .border-slate-800\/80,
+    html.theme-light .border-slate-700,
+    html.theme-light .border-slate-700\/80,
+    html.theme-light .border-slate-700\/70,
+    html.theme-light .border-slate-700\/60,
+    html.theme-light .border-slate-700\/50 { border-color: #d8dee9 !important; }
+    html.theme-light .text-white,
+    html.theme-light .text-slate-100,
+    html.theme-light .text-slate-200 { color: #0f172a !important; }
+    html.theme-light .text-slate-300 { color: #334155 !important; }
+    html.theme-light .text-slate-400,
+    html.theme-light .text-slate-500 { color: #64748b !important; }
+    html.theme-light .text-indigo-300,
+    html.theme-light .text-indigo-400 { color: #4f46e5 !important; }
+    html.theme-light .glass-card {
+      background: rgba(255, 255, 255, 0.85) !important;
+      border: 1px solid rgba(15, 23, 42, 0.08) !important;
+      box-shadow: 0 8px 24px -18px rgba(15, 23, 42, 0.45);
+    }
+    /* keep brand buttons legible in light mode */
+    html.theme-light .bg-indigo-600,
+    html.theme-light .bg-indigo-600 .text-white { color: #ffffff !important; }
+    html.theme-light .bg-indigo-600 { background-color: #4f46e5 !important; }
+
     /* A4 Styling for Export */
+
     .a4-page {
       width: 210mm;
       min-height: 297mm;
@@ -110,9 +163,13 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <button onclick="switchTab('tab-settings')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
-          <i class="fa-solid fa-gear text-xs"></i>
+        <button onclick="toggleTheme()" id="theme-btn" aria-label="Switch to light theme" aria-pressed="false" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
+          <i class="fa-solid fa-sun text-xs" aria-hidden="true"></i>
         </button>
+        <button onclick="switchTab('tab-settings')" aria-label="Open settings" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition">
+          <i class="fa-solid fa-gear text-xs" aria-hidden="true"></i>
+        </button>
+
       </div>
     </header>
 
@@ -470,10 +527,10 @@
             <p class="text-[10px] text-slate-400 truncate">Real government-issued form preview</p>
           </div>
           <div class="flex gap-1.5 shrink-0">
-            <button onclick="openPdfNewTab()" class="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1">
+            <button onclick="openPdfNewTab()" aria-label="Open PDF in a new tab" class="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </button>
-            <button onclick="downloadA4PDF()" class="py-2 px-3 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
+            <button onclick="downloadA4PDF()" aria-label="Download official PDF (keyboard shortcut D)" class="py-2 px-3 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
               <i class="fa-solid fa-download"></i> Download
             </button>
           </div>
@@ -481,47 +538,54 @@
 
         <!-- Form Selector Switcher Pills -->
         <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 text-[11px]">
-          <button onclick="switchPdfView('schengen')" id="pill-schengen" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white whitespace-nowrap">Schengen</button>
-          <button onclick="switchPdfView('moldova')" id="pill-moldova" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Moldova</button>
-          <button onclick="switchPdfView('myanmar')" id="pill-myanmar" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Myanmar</button>
-          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Singapore</button>
-          <button onclick="switchPdfView('malta')" id="pill-malta" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">Malta</button>
-          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap">NZ INZ1017</button>
+          <button onclick="switchPdfView('schengen')" id="pill-schengen" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white whitespace-nowrap" aria-pressed="true">Schengen</button>
+          <button onclick="switchPdfView('moldova')" id="pill-moldova" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap" aria-pressed="false">Moldova</button>
+          <button onclick="switchPdfView('myanmar')" id="pill-myanmar" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap" aria-pressed="false">Myanmar</button>
+          <button onclick="switchPdfView('singapore')" id="pill-singapore" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap" aria-pressed="false">Singapore</button>
+          <button onclick="switchPdfView('malta')" id="pill-malta" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap" aria-pressed="false">Malta</button>
+          <button onclick="switchPdfView('nz')" id="pill-nz" class="pdf-pill px-3 py-1.5 rounded-xl font-semibold bg-slate-800 text-slate-300 whitespace-nowrap" aria-pressed="false">NZ INZ1017</button>
         </div>
 
         <!-- Zoom Controls -->
         <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card">
           <div class="flex items-center gap-1.5 min-w-0">
-            <div class="w-7 h-7 rounded-lg bg-red-500/20 text-red-300 grid place-items-center shrink-0">
-              <i class="fa-solid fa-file-pdf text-[11px]"></i>
-            </div>
+            <button onclick="toggleThumbs()" id="thumbs-toggle" aria-label="Toggle PDF thumbnail sidebar" aria-expanded="false" aria-controls="pdf-thumbs" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition shrink-0">
+              <i class="fa-solid fa-table-cells-large text-[11px]" aria-hidden="true"></i>
+            </button>
             <div class="min-w-0">
               <p id="pdf-active-name" class="text-[11px] font-bold text-white truncate">Schengen Visa</p>
               <p class="text-[9px] text-slate-400 truncate">Official PDF · Real Form</p>
             </div>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out">
-              <i class="fa-solid fa-minus text-xs"></i>
+          <div class="flex items-center gap-1 shrink-0" role="group" aria-label="PDF zoom controls">
+            <button onclick="zoomPdf(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom out (keyboard shortcut minus)" accesskey="-">
+              <i class="fa-solid fa-minus text-xs" aria-hidden="true"></i>
             </button>
-            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center">100%</span>
-            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in">
-              <i class="fa-solid fa-plus text-xs"></i>
+            <span id="pdf-zoom-label" class="text-[11px] font-bold text-slate-200 min-w-[42px] text-center" role="status" aria-live="polite" aria-atomic="true">100%</span>
+            <button onclick="zoomPdf(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Zoom in (keyboard shortcut plus)">
+              <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
             </button>
-            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom">
-              <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+            <button onclick="resetZoom()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition ml-1" aria-label="Reset zoom to 100% (keyboard shortcut 0)">
+              <i class="fa-solid fa-arrows-rotate text-[10px]" aria-hidden="true"></i>
+            </button>
+            <button onclick="toggleFullscreen()" id="fs-btn" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center transition" aria-label="Toggle full-screen PDF view (keyboard shortcut F)">
+              <i class="fa-solid fa-expand text-[11px]" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        <!-- Real PDF Viewer -->
-        <div class="w-full rounded-2xl border border-slate-800 bg-slate-950 overflow-auto no-scrollbar" style="height: 60vh; min-height: 380px;">
-          <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
-            <iframe id="pdf-frame" src="" title="Official Visa PDF" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+        <!-- Real PDF Viewer + Thumbnail Sidebar -->
+        <div id="pdf-stage" class="w-full flex gap-2 rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden" style="height: 60vh; min-height: 380px;">
+          <aside id="pdf-thumbs" class="hidden w-[78px] shrink-0 overflow-y-auto no-scrollbar border-r border-slate-800 p-1.5 space-y-1.5" aria-label="PDF thumbnails" role="tablist" aria-orientation="vertical"></aside>
+          <div id="pdf-scroll" class="flex-1 overflow-auto no-scrollbar touch-none" tabindex="0" role="document" aria-label="PDF document viewer. Use plus and minus to zoom, arrow up and down to switch documents, F for full screen, D to download.">
+            <div id="pdf-viewer-wrap" class="origin-top-left transition-transform duration-200" style="transform: scale(1); width: 100%; height: 100%;">
+              <iframe id="pdf-frame" src="" title="Official Visa PDF document" class="w-full h-full block bg-white" style="border: 0;"></iframe>
+            </div>
           </div>
         </div>
 
-        <p class="text-[10px] text-slate-500 text-center px-2">Tap Download to save the official PDF, or the external icon to open in a new tab for print / share.</p>
+        <p class="text-[10px] text-slate-500 text-center px-2">Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+
       </section>
 
 
@@ -577,7 +641,7 @@
   </div>
 
   <!-- Notification Toast Container -->
-  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+  <div id="toast" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
     <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Action completed!</span>
   </div>
 
@@ -675,9 +739,9 @@
     }
 
     function selectVisaForm(formType) {
-      appState.activeForm = formType;
       showToast(`Selected ${formType.toUpperCase()} Visa Form`);
       switchTab('tab-pdf');
+      switchPdfView(formType);
     }
 
     function setEngine(mode) {
@@ -933,6 +997,11 @@
       nz:        'NZ_INZ_1017.pdf',
     };
 
+    const PDF_ORDER = ['schengen','moldova','myanmar','singapore','malta','nz'];
+    const LS_FORM = 'visaai.lastForm';
+    const LS_ZOOM = 'visaai.zoom';
+    const LS_THEME = 'visaai.theme';
+
     let pdfZoom = 1;
 
     function switchPdfView(formType) {
@@ -940,13 +1009,24 @@
       document.querySelectorAll('.pdf-pill').forEach(btn => {
         btn.classList.remove('bg-indigo-600', 'text-white');
         btn.classList.add('bg-slate-800', 'text-slate-300');
+        btn.setAttribute('aria-pressed', 'false');
       });
       const activePill = document.getElementById(`pill-${formType}`);
       if (activePill) {
         activePill.classList.remove('bg-slate-800', 'text-slate-300');
         activePill.classList.add('bg-indigo-600', 'text-white');
+        activePill.setAttribute('aria-pressed', 'true');
       }
+      try { localStorage.setItem(LS_FORM, formType); } catch (e) {}
       renderActiveA4Form();
+      renderThumbs();
+    }
+
+    function stepPdf(dir) {
+      const i = PDF_ORDER.indexOf(appState.activeForm);
+      const next = PDF_ORDER[(i + dir + PDF_ORDER.length) % PDF_ORDER.length];
+      switchPdfView(next);
+      showToast(PDF_LABELS[next]);
     }
 
     function renderActiveA4Form() {
@@ -954,19 +1034,50 @@
       const label = document.getElementById('pdf-active-name');
       if (!frame) return;
       const url = PDF_URLS[appState.activeForm] || PDF_URLS.schengen;
-      // #toolbar=0 hides native browser PDF toolbar for a cleaner premium look
       frame.src = url + '#toolbar=0&navpanes=0&view=FitH';
+      frame.title = (PDF_LABELS[appState.activeForm] || 'Visa') + ' official PDF document';
       if (label) label.textContent = PDF_LABELS[appState.activeForm] || 'Visa PDF';
-      resetZoom();
+      applyZoom();
     }
 
+    /* ---------- Thumbnail sidebar ---------- */
+    function toggleThumbs(force) {
+      const bar = document.getElementById('pdf-thumbs');
+      const btn = document.getElementById('thumbs-toggle');
+      if (!bar) return;
+      const show = typeof force === 'boolean' ? force : bar.classList.contains('hidden');
+      bar.classList.toggle('hidden', !show);
+      if (btn) btn.setAttribute('aria-expanded', String(show));
+      if (show) renderThumbs();
+    }
+
+    function renderThumbs() {
+      const bar = document.getElementById('pdf-thumbs');
+      if (!bar || bar.classList.contains('hidden')) return;
+      bar.innerHTML = PDF_ORDER.map(k => {
+        const active = k === appState.activeForm;
+        return `<button role="tab" aria-selected="${active}" aria-label="Open ${PDF_LABELS[k]}" onclick="switchPdfView('${k}')"
+          class="w-full rounded-xl overflow-hidden border ${active ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-700/70'} bg-white/5 block text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <span class="block h-[62px] overflow-hidden bg-white relative">
+            <iframe src="${PDF_URLS[k]}#toolbar=0&navpanes=0&view=FitH&page=1" title="" aria-hidden="true" tabindex="-1"
+              class="pointer-events-none border-0 bg-white" style="width:260px;height:340px;transform:scale(0.28);transform-origin:top left;"></iframe>
+          </span>
+          <span class="block px-1 py-1 text-[8px] font-semibold ${active ? 'text-indigo-300' : 'text-slate-400'} truncate">${PDF_LABELS[k]}</span>
+        </button>`;
+      }).join('');
+    }
+
+    /* ---------- Zoom ---------- */
     function zoomPdf(dir) {
-      pdfZoom = Math.min(2.5, Math.max(0.6, pdfZoom + dir * 0.15));
-      applyZoom();
+      setZoom(pdfZoom + dir * 0.15);
     }
     function resetZoom() {
-      pdfZoom = 1;
+      setZoom(1);
+    }
+    function setZoom(v) {
+      pdfZoom = Math.min(3, Math.max(0.5, v));
       applyZoom();
+      try { localStorage.setItem(LS_ZOOM, String(pdfZoom)); } catch (e) {}
     }
     function applyZoom() {
       const wrap = document.getElementById('pdf-viewer-wrap');
@@ -978,6 +1089,107 @@
       }
       if (label) label.textContent = `${Math.round(pdfZoom * 100)}%`;
     }
+
+    /* ---------- Full screen ---------- */
+    function toggleFullscreen() {
+      const stage = document.getElementById('pdf-stage');
+      const icon = document.querySelector('#fs-btn i');
+      if (!stage) return;
+      const isFs = stage.classList.toggle('pdf-fullscreen');
+      if (icon) icon.className = `fa-solid ${isFs ? 'fa-compress' : 'fa-expand'} text-[11px]`;
+      document.getElementById('fs-btn')?.setAttribute('aria-label', isFs ? 'Exit full-screen PDF view (Escape)' : 'Toggle full-screen PDF view (keyboard shortcut F)');
+      if (isFs) document.getElementById('pdf-scroll')?.focus();
+    }
+
+    /* ---------- Pinch to zoom ---------- */
+    function initPinch() {
+      const el = document.getElementById('pdf-scroll');
+      if (!el) return;
+      const pts = new Map();
+      let startDist = 0, startZoom = 1;
+      el.addEventListener('pointerdown', e => {
+        pts.set(e.pointerId, e);
+        if (pts.size === 2) {
+          const [a, b] = [...pts.values()];
+          startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          startZoom = pdfZoom;
+        }
+      });
+      el.addEventListener('pointermove', e => {
+        if (!pts.has(e.pointerId)) return;
+        pts.set(e.pointerId, e);
+        if (pts.size === 2 && startDist > 0) {
+          e.preventDefault();
+          const [a, b] = [...pts.values()];
+          const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          setZoom(startZoom * (d / startDist));
+        }
+      }, { passive: false });
+      const clear = e => { pts.delete(e.pointerId); if (pts.size < 2) startDist = 0; };
+      el.addEventListener('pointerup', clear);
+      el.addEventListener('pointercancel', clear);
+      el.addEventListener('wheel', e => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+        setZoom(pdfZoom * Math.exp(-dy * 0.0015));
+      }, { passive: false });
+    }
+
+    /* ---------- Theme ---------- */
+    function applyTheme(theme) {
+      const light = theme === 'light';
+      document.documentElement.classList.toggle('theme-light', light);
+      const icon = document.querySelector('#theme-btn i');
+      if (icon) icon.className = `fa-solid ${light ? 'fa-moon' : 'fa-sun'} text-xs`;
+      const btn = document.getElementById('theme-btn');
+      if (btn) {
+        btn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+        btn.setAttribute('aria-pressed', String(light));
+      }
+      try { localStorage.setItem(LS_THEME, theme); } catch (e) {}
+    }
+    function toggleTheme() {
+      applyTheme(document.documentElement.classList.contains('theme-light') ? 'dark' : 'light');
+    }
+
+    /* ---------- Keyboard shortcuts ---------- */
+    document.addEventListener('keydown', e => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (e.metaKey || e.altKey) return;
+      const stage = document.getElementById('pdf-stage');
+      const inPdf = appState.activeTab === 'tab-pdf';
+      if (e.key === 'Escape' && stage?.classList.contains('pdf-fullscreen')) { toggleFullscreen(); return; }
+      if (!inPdf) return;
+      switch (e.key) {
+        case '+': case '=': e.preventDefault(); zoomPdf(1); break;
+        case '-': case '_': e.preventDefault(); zoomPdf(-1); break;
+        case '0': e.preventDefault(); resetZoom(); break;
+        case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
+        case 'd': case 'D': if (!e.ctrlKey) { e.preventDefault(); downloadA4PDF(); } break;
+        case 'ArrowDown': case 'ArrowRight': e.preventDefault(); stepPdf(1); break;
+        case 'ArrowUp': case 'ArrowLeft': e.preventDefault(); stepPdf(-1); break;
+      }
+    });
+
+    /* ---------- Restore persisted session ---------- */
+    (function restoreSession() {
+      let theme = 'dark', form = null, zoom = null;
+      try {
+        theme = localStorage.getItem(LS_THEME) || 'dark';
+        form = localStorage.getItem(LS_FORM);
+        zoom = parseFloat(localStorage.getItem(LS_ZOOM) || '');
+      } catch (e) {}
+      const start = () => {
+        applyTheme(theme);
+        if (zoom && !isNaN(zoom)) pdfZoom = Math.min(3, Math.max(0.5, zoom));
+        if (form && PDF_URLS[form]) switchPdfView(form); else applyZoom();
+        initPinch();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+      else start();
+    })();
 
     function openPdfNewTab() {
       const url = PDF_URLS[appState.activeForm];
@@ -997,6 +1209,7 @@
       a.remove();
       showToast('Downloading official PDF…');
     }
+
 
     /* Toast Notification Utility */
     function showToast(message) {
