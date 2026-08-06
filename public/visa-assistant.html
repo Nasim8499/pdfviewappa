@@ -739,9 +739,9 @@
     }
 
     function selectVisaForm(formType) {
-      appState.activeForm = formType;
       showToast(`Selected ${formType.toUpperCase()} Visa Form`);
       switchTab('tab-pdf');
+      switchPdfView(formType);
     }
 
     function setEngine(mode) {
