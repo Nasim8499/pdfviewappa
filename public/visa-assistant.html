@@ -1054,6 +1054,65 @@
     let pdfDoc = null;
     let pdfRenderToken = 0;
     let pdfBaseWidths = [];
+    let pdfCurrentPage = 1;
+    let pdfTotalPages = 1;
+    let pageObserver = null;
+    let thumbObserver = null;
+
+    /* ---------- Announcements ---------- */
+    function announce(msg, assertive) {
+      const el = document.getElementById(assertive ? 'pdf-alert' : 'pdf-live');
+      if (!el) return;
+      el.textContent = '';
+      setTimeout(() => { el.textContent = msg; }, 50);
+    }
+
+    /* ---------- Page navigation ---------- */
+    function updatePageIndicator(announceChange) {
+      const ind = document.getElementById('pdf-page-indicator');
+      if (ind) ind.textContent = `Page ${pdfCurrentPage} / ${pdfTotalPages}`;
+      const prev = document.getElementById('page-prev');
+      const next = document.getElementById('page-next');
+      if (prev) prev.disabled = pdfCurrentPage <= 1;
+      if (next) next.disabled = pdfCurrentPage >= pdfTotalPages;
+      document.querySelectorAll('#pdf-thumbs [role="tab"]').forEach((b, i) => {
+        b.setAttribute('aria-selected', String(i + 1 === pdfCurrentPage));
+        b.classList.toggle('ring-2', i + 1 === pdfCurrentPage);
+        b.classList.toggle('ring-indigo-400', i + 1 === pdfCurrentPage);
+      });
+      if (announceChange) announce(`Page ${pdfCurrentPage} of ${pdfTotalPages}`);
+    }
+
+    function gotoPage(n) {
+      const page = Math.min(pdfTotalPages, Math.max(1, n));
+      const card = document.getElementById(`pdf-page-${page}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pdfCurrentPage = page;
+      updatePageIndicator(true);
+    }
+
+    function observePages(total) {
+      pdfTotalPages = total;
+      pdfCurrentPage = 1;
+      if (pageObserver) pageObserver.disconnect();
+      const root = document.getElementById('pdf-scroll');
+      pageObserver = new IntersectionObserver(entries => {
+        let best = null;
+        entries.forEach(en => {
+          if (en.isIntersecting && (!best || en.intersectionRatio > best.intersectionRatio)) best = en;
+        });
+        if (!best) return;
+        const n = parseInt(best.target.id.replace('pdf-page-', ''), 10);
+        if (n && n !== pdfCurrentPage) { pdfCurrentPage = n; updatePageIndicator(true); }
+      }, { root, threshold: [0.25, 0.6] });
+      for (let n = 1; n <= total; n++) {
+        const el = document.getElementById(`pdf-page-${n}`);
+        if (el) pageObserver.observe(el);
+      }
+      updatePageIndicator(false);
+    }
+
 
     async function renderActiveA4Form() {
       const host = document.getElementById('pdf-pages');
