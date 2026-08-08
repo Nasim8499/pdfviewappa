@@ -1384,32 +1384,95 @@
       if (url) window.open(url, '_blank', 'noopener');
     }
 
-    function downloadA4PDF() {
-      const url = PDF_URLS[appState.activeForm];
-      const name = PDF_FILENAMES[appState.activeForm] || 'visa-form.pdf';
-      if (!url) { showToast('PDF not available'); return; }
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      showToast('Downloading official PDF…');
+    let downloadBusy = false;
+    async function downloadA4PDF(attempt = 1) {
+      const key = appState.activeForm;
+      const url = PDF_URLS[key];
+      const name = PDF_FILENAMES[key] || 'visa-form.pdf';
+      if (!url) {
+        announce('PDF not available for this form.', true);
+        showToast('PDF not available for this form', { tone: 'error' });
+        return;
+      }
+      if (downloadBusy) return;
+      downloadBusy = true;
+      const MAX = 3;
+      showToast(attempt > 1 ? `Retrying download (attempt ${attempt} of ${MAX})…` : 'Preparing official PDF…', { tone: 'info', duration: 4000 });
+      announce(attempt > 1 ? `Retrying download, attempt ${attempt} of ${MAX}.` : 'Preparing official PDF download.');
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 20000);
+        const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = name;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 4000);
+        downloadBusy = false;
+        showToast('Download started', { tone: 'success' });
+        announce(`Download started for ${name}.`);
+      } catch (err) {
+        console.error('PDF download failed', err);
+        downloadBusy = false;
+        const reason = err && err.name === 'AbortError' ? 'the connection timed out' : 'the network request failed';
+        if (attempt < MAX) {
+          const delay = 800 * attempt;
+          announce(`Download failed because ${reason}. Retrying automatically in ${Math.round(delay / 1000)} seconds.`, true);
+          showToast(`Download failed — retrying in ${Math.round(delay / 1000)}s`, { tone: 'error', duration: delay });
+          setTimeout(() => downloadA4PDF(attempt + 1), delay);
+        } else {
+          announce(`Download failed after ${MAX} attempts because ${reason}. Use the retry button or open the PDF in a new tab.`, true);
+          showToast('Download failed after 3 attempts', {
+            tone: 'error',
+            duration: 9000,
+            actionLabel: 'Retry',
+            onAction: () => downloadA4PDF(1)
+          });
+        }
+      }
     }
 
 
     /* Toast Notification Utility */
-    function showToast(message) {
+    let toastTimer = null;
+    function showToast(message, opts = {}) {
       const toast = document.getElementById('toast');
       const msg = document.getElementById('toast-msg');
+      const icon = document.getElementById('toast-icon');
+      const action = document.getElementById('toast-action');
+      if (!toast || !msg) return;
+      const tone = opts.tone || 'success';
       msg.textContent = message;
+      toast.classList.remove('bg-indigo-600', 'bg-emerald-600', 'bg-red-600');
+      toast.classList.add(tone === 'error' ? 'bg-red-600' : tone === 'info' ? 'bg-indigo-600' : 'bg-emerald-600');
+      toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+      toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
+      if (icon) icon.className = `fa-solid ${tone === 'error' ? 'fa-triangle-exclamation' : tone === 'info' ? 'fa-circle-info' : 'fa-circle-check'}`;
+      if (action) {
+        if (opts.actionLabel) {
+          action.textContent = opts.actionLabel;
+          action.setAttribute('aria-label', `${opts.actionLabel}: ${message}`);
+          action.classList.remove('hidden');
+          action.onclick = () => { toast.classList.add('opacity-0', 'pointer-events-none'); opts.onAction?.(); };
+        } else {
+          action.classList.add('hidden');
+          action.onclick = null;
+        }
+      }
       toast.classList.remove('opacity-0', 'pointer-events-none');
-      
-      setTimeout(() => {
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 2500);
+      }, opts.duration || 2800);
     }
+
   </script>
 </body>
 
