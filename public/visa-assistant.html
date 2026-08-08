@@ -1174,15 +1174,19 @@
           await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
           if (token !== pdfRenderToken) return;
         }
+        observePages(doc.numPages);
         renderThumbs();
+        announce(`${PDF_LABELS[key] || 'Visa PDF'} loaded, ${doc.numPages} pages. Page 1 of ${doc.numPages}.`);
       } catch (err) {
         console.error('PDF render failed', err);
+        announce('Could not load the PDF. Showing basic viewer instead.', true);
+        showToast('Could not load PDF pages — showing basic viewer');
         host.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&view=FitH" title="Official PDF" class="w-full bg-white border-0" style="height:100%;min-height:70vh;"></iframe>`;
       }
       applyZoom();
     }
 
-    /* ---------- Page thumbnail sidebar ---------- */
+    /* ---------- Page thumbnail sidebar (lazy) ---------- */
     function toggleThumbs(force) {
       const bar = document.getElementById('pdf-thumbs');
       const btn = document.getElementById('thumbs-toggle');
@@ -1193,17 +1197,47 @@
       if (show) renderThumbs();
     }
 
-    async function renderThumbs() {
+    function renderThumbs() {
       const bar = document.getElementById('pdf-thumbs');
       if (!bar || bar.classList.contains('hidden') || !pdfDoc) return;
       const doc = pdfDoc;
       bar.innerHTML = '';
+      if (thumbObserver) thumbObserver.disconnect();
+
+      thumbObserver = new IntersectionObserver(async (entries, obs) => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          const btn = en.target;
+          obs.unobserve(btn);
+          if (btn.dataset.loaded === '1') continue;
+          btn.dataset.loaded = '1';
+          const n = Number(btn.dataset.page);
+          const c = btn.querySelector('canvas');
+          try {
+            const page = await doc.getPage(n);
+            if (doc !== pdfDoc) return;
+            const raw = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale: 132 / raw.width });
+            c.width = Math.round(vp.width);
+            c.height = Math.round(vp.height);
+            await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+            btn.querySelector('.thumb-skeleton')?.remove();
+          } catch (e) { btn.dataset.loaded = '0'; }
+        }
+      }, { root: bar, rootMargin: '250px 0px' });
+
       for (let n = 1; n <= doc.numPages; n++) {
         const btn = document.createElement('button');
         btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-label', `Go to page ${n}`);
-        btn.className = 'w-full rounded-lg overflow-hidden border border-slate-700/70 bg-white block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400';
-        btn.onclick = () => document.getElementById(`pdf-page-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        btn.setAttribute('aria-label', `Go to page ${n} of ${doc.numPages}`);
+        btn.setAttribute('aria-selected', String(n === pdfCurrentPage));
+        btn.dataset.page = String(n);
+        btn.className = 'relative w-full rounded-lg overflow-hidden border border-slate-700/70 bg-white block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400';
+        btn.onclick = () => gotoPage(n);
+        const skel = document.createElement('span');
+        skel.className = 'thumb-skeleton block w-full bg-slate-800 animate-pulse';
+        skel.style.height = '92px';
+        btn.appendChild(skel);
         const c = document.createElement('canvas');
         c.className = 'block w-full h-auto';
         btn.appendChild(c);
@@ -1212,17 +1246,11 @@
         cap.textContent = `Page ${n}`;
         btn.appendChild(cap);
         bar.appendChild(btn);
-        try {
-          const page = await doc.getPage(n);
-          if (doc !== pdfDoc) return;
-          const raw = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: 132 / raw.width });
-          c.width = Math.round(vp.width);
-          c.height = Math.round(vp.height);
-          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-        } catch (e) {}
+        thumbObserver.observe(btn);
       }
+      updatePageIndicator(false);
     }
+
 
     /* ---------- Zoom ---------- */
     function zoomPdf(dir) {
