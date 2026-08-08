@@ -581,15 +581,31 @@
           </div>
         </div>
 
+        <!-- Page navigation -->
+        <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card" role="group" aria-label="PDF page navigation">
+          <button onclick="gotoPage(pdfCurrentPage - 1)" id="page-prev" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Previous page (keyboard shortcut Page Up)">
+            <i class="fa-solid fa-chevron-up text-[10px]" aria-hidden="true"></i> Prev
+          </button>
+          <p id="pdf-page-indicator" class="text-[11px] font-bold text-slate-200">Page 1 / 1</p>
+          <button onclick="gotoPage(pdfCurrentPage + 1)" id="page-next" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Next page (keyboard shortcut Page Down)">
+            Next <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- Screen-reader announcements -->
+        <p id="pdf-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <p id="pdf-alert" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></p>
+
         <!-- Real PDF Viewer (all pages) + Page Thumbnail Sidebar -->
         <div id="pdf-stage" class="w-full flex gap-2 rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden" style="height: 60vh; min-height: 380px;">
           <aside id="pdf-thumbs" class="hidden w-[78px] shrink-0 overflow-y-auto no-scrollbar border-r border-slate-800 p-1.5 space-y-1.5" aria-label="PDF page thumbnails" role="tablist" aria-orientation="vertical"></aside>
           <div id="pdf-scroll" class="flex-1 overflow-auto no-scrollbar touch-none" tabindex="0" role="document" aria-label="PDF document viewer. Scroll to read all pages. Use plus and minus to zoom, arrow up and down to switch documents, F for full screen, D to download.">
-            <div id="pdf-pages" class="flex flex-col items-center gap-3 p-3" aria-live="polite"></div>
+            <div id="pdf-pages" class="flex flex-col items-center gap-3 p-3"></div>
           </div>
         </div>
 
-        <p class="text-[10px] text-slate-500 text-center px-2"><span id="pdf-page-count" class="font-semibold text-slate-400"></span> Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+        <p class="text-[10px] text-slate-500 text-center px-2"><span id="pdf-page-count" class="font-semibold text-slate-400"></span> Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>PgUp</kbd>/<kbd>PgDn</kbd> page, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+
 
 
       </section>
