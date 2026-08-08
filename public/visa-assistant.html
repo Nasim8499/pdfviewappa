@@ -1035,18 +1035,79 @@
       showToast(PDF_LABELS[next]);
     }
 
-    function renderActiveA4Form() {
-      const frame = document.getElementById('pdf-frame');
+    let pdfDoc = null;
+    let pdfRenderToken = 0;
+    let pdfBaseWidths = [];
+
+    async function renderActiveA4Form() {
+      const host = document.getElementById('pdf-pages');
       const label = document.getElementById('pdf-active-name');
-      if (!frame) return;
-      const url = PDF_URLS[appState.activeForm] || PDF_URLS.schengen;
-      frame.src = url + '#toolbar=0&navpanes=0&view=FitH';
-      frame.title = (PDF_LABELS[appState.activeForm] || 'Visa') + ' official PDF document';
-      if (label) label.textContent = PDF_LABELS[appState.activeForm] || 'Visa PDF';
+      const countEl = document.getElementById('pdf-page-count');
+      if (!host) return;
+      const key = appState.activeForm && PDF_URLS[appState.activeForm] ? appState.activeForm : 'schengen';
+      const url = PDF_URLS[key];
+      if (label) label.textContent = PDF_LABELS[key] || 'Visa PDF';
+
+      const token = ++pdfRenderToken;
+      pdfBaseWidths = [];
+      host.innerHTML = `<div class="text-slate-400 text-xs py-10 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Loading official PDF…</div>`;
+      if (countEl) countEl.textContent = '';
+
+      if (!window.pdfjsLib) {
+        host.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&view=FitH" title="Official PDF" class="w-full bg-white border-0" style="height:100%;min-height:70vh;"></iframe>`;
+        return;
+      }
+
+      try {
+        const doc = await pdfjsLib.getDocument({ url }).promise;
+        if (token !== pdfRenderToken) return;
+        pdfDoc = doc;
+        host.innerHTML = '';
+        if (countEl) countEl.textContent = `${doc.numPages} page${doc.numPages > 1 ? 's' : ''} ·`;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const stageW = (document.getElementById('pdf-scroll')?.clientWidth || 360) - 24;
+
+        for (let n = 1; n <= doc.numPages; n++) {
+          const page = await doc.getPage(n);
+          if (token !== pdfRenderToken) return;
+          const raw = page.getViewport({ scale: 1 });
+          const fit = Math.max(0.4, stageW / raw.width);
+          const viewport = page.getViewport({ scale: fit * dpr });
+
+          const card = document.createElement('div');
+          card.className = 'pdf-page-card relative bg-white rounded-lg shadow-lg overflow-hidden';
+          card.id = `pdf-page-${n}`;
+          card.style.width = `${Math.round(raw.width * fit * pdfZoom)}px`;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          canvas.className = 'block w-full h-auto';
+          canvas.setAttribute('role', 'img');
+          canvas.setAttribute('aria-label', `${PDF_LABELS[key]} page ${n} of ${doc.numPages}`);
+          card.appendChild(canvas);
+
+          const badge = document.createElement('span');
+          badge.className = 'absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-slate-900/75 text-white text-[9px] font-bold';
+          badge.textContent = `${n} / ${doc.numPages}`;
+          card.appendChild(badge);
+
+          host.appendChild(card);
+          pdfBaseWidths.push({ el: card, w: raw.width * fit });
+
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          if (token !== pdfRenderToken) return;
+        }
+        renderThumbs();
+      } catch (err) {
+        console.error('PDF render failed', err);
+        host.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&view=FitH" title="Official PDF" class="w-full bg-white border-0" style="height:100%;min-height:70vh;"></iframe>`;
+      }
       applyZoom();
     }
 
-    /* ---------- Thumbnail sidebar ---------- */
+    /* ---------- Page thumbnail sidebar ---------- */
     function toggleThumbs(force) {
       const bar = document.getElementById('pdf-thumbs');
       const btn = document.getElementById('thumbs-toggle');
@@ -1057,20 +1118,35 @@
       if (show) renderThumbs();
     }
 
-    function renderThumbs() {
+    async function renderThumbs() {
       const bar = document.getElementById('pdf-thumbs');
-      if (!bar || bar.classList.contains('hidden')) return;
-      bar.innerHTML = PDF_ORDER.map(k => {
-        const active = k === appState.activeForm;
-        return `<button role="tab" aria-selected="${active}" aria-label="Open ${PDF_LABELS[k]}" onclick="switchPdfView('${k}')"
-          class="w-full rounded-xl overflow-hidden border ${active ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-700/70'} bg-white/5 block text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
-          <span class="block h-[62px] overflow-hidden bg-white relative">
-            <iframe src="${PDF_URLS[k]}#toolbar=0&navpanes=0&view=FitH&page=1" title="" aria-hidden="true" tabindex="-1"
-              class="pointer-events-none border-0 bg-white" style="width:260px;height:340px;transform:scale(0.28);transform-origin:top left;"></iframe>
-          </span>
-          <span class="block px-1 py-1 text-[8px] font-semibold ${active ? 'text-indigo-300' : 'text-slate-400'} truncate">${PDF_LABELS[k]}</span>
-        </button>`;
-      }).join('');
+      if (!bar || bar.classList.contains('hidden') || !pdfDoc) return;
+      const doc = pdfDoc;
+      bar.innerHTML = '';
+      for (let n = 1; n <= doc.numPages; n++) {
+        const btn = document.createElement('button');
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-label', `Go to page ${n}`);
+        btn.className = 'w-full rounded-lg overflow-hidden border border-slate-700/70 bg-white block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400';
+        btn.onclick = () => document.getElementById(`pdf-page-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const c = document.createElement('canvas');
+        c.className = 'block w-full h-auto';
+        btn.appendChild(c);
+        const cap = document.createElement('span');
+        cap.className = 'block text-[8px] font-semibold text-slate-400 py-0.5 bg-slate-900';
+        cap.textContent = `Page ${n}`;
+        btn.appendChild(cap);
+        bar.appendChild(btn);
+        try {
+          const page = await doc.getPage(n);
+          if (doc !== pdfDoc) return;
+          const raw = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: 132 / raw.width });
+          c.width = Math.round(vp.width);
+          c.height = Math.round(vp.height);
+          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        } catch (e) {}
+      }
     }
 
     /* ---------- Zoom ---------- */
@@ -1086,15 +1162,11 @@
       try { localStorage.setItem(LS_ZOOM, String(pdfZoom)); } catch (e) {}
     }
     function applyZoom() {
-      const wrap = document.getElementById('pdf-viewer-wrap');
       const label = document.getElementById('pdf-zoom-label');
-      if (wrap) {
-        wrap.style.transform = `scale(${pdfZoom})`;
-        wrap.style.width = `${100 / pdfZoom}%`;
-        wrap.style.height = `${100 / pdfZoom}%`;
-      }
+      pdfBaseWidths.forEach(({ el, w }) => { el.style.width = `${Math.round(w * pdfZoom)}px`; });
       if (label) label.textContent = `${Math.round(pdfZoom * 100)}%`;
     }
+
 
     /* ---------- Full screen ---------- */
     function toggleFullscreen() {
