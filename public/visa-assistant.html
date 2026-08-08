@@ -663,9 +663,11 @@
   </div>
 
   <!-- Notification Toast Container -->
-  <div id="toast" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
-    <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Action completed!</span>
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2 max-w-[92vw]">
+    <i id="toast-icon" class="fa-solid fa-circle-check" aria-hidden="true"></i> <span id="toast-msg">Action completed!</span>
+    <button id="toast-action" type="button" class="hidden ml-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold transition">Retry</button>
   </div>
+
 
   <script>
     /* ==========================================================================
