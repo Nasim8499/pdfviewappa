@@ -581,15 +581,31 @@
           </div>
         </div>
 
+        <!-- Page navigation -->
+        <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card" role="group" aria-label="PDF page navigation">
+          <button onclick="gotoPage(pdfCurrentPage - 1)" id="page-prev" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Previous page (keyboard shortcut Page Up)">
+            <i class="fa-solid fa-chevron-up text-[10px]" aria-hidden="true"></i> Prev
+          </button>
+          <p id="pdf-page-indicator" class="text-[11px] font-bold text-slate-200">Page 1 / 1</p>
+          <button onclick="gotoPage(pdfCurrentPage + 1)" id="page-next" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Next page (keyboard shortcut Page Down)">
+            Next <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- Screen-reader announcements -->
+        <p id="pdf-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <p id="pdf-alert" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></p>
+
         <!-- Real PDF Viewer (all pages) + Page Thumbnail Sidebar -->
         <div id="pdf-stage" class="w-full flex gap-2 rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden" style="height: 60vh; min-height: 380px;">
           <aside id="pdf-thumbs" class="hidden w-[78px] shrink-0 overflow-y-auto no-scrollbar border-r border-slate-800 p-1.5 space-y-1.5" aria-label="PDF page thumbnails" role="tablist" aria-orientation="vertical"></aside>
           <div id="pdf-scroll" class="flex-1 overflow-auto no-scrollbar touch-none" tabindex="0" role="document" aria-label="PDF document viewer. Scroll to read all pages. Use plus and minus to zoom, arrow up and down to switch documents, F for full screen, D to download.">
-            <div id="pdf-pages" class="flex flex-col items-center gap-3 p-3" aria-live="polite"></div>
+            <div id="pdf-pages" class="flex flex-col items-center gap-3 p-3"></div>
           </div>
         </div>
 
-        <p class="text-[10px] text-slate-500 text-center px-2"><span id="pdf-page-count" class="font-semibold text-slate-400"></span> Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+        <p class="text-[10px] text-slate-500 text-center px-2"><span id="pdf-page-count" class="font-semibold text-slate-400"></span> Pinch to zoom · Shortcuts: <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>F</kbd> full screen, <kbd>D</kbd> download, <kbd>PgUp</kbd>/<kbd>PgDn</kbd> page, <kbd>↑</kbd>/<kbd>↓</kbd> switch form.</p>
+
 
 
       </section>
@@ -647,9 +663,11 @@
   </div>
 
   <!-- Notification Toast Container -->
-  <div id="toast" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
-    <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Action completed!</span>
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true" class="fixed top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2 max-w-[92vw]">
+    <i id="toast-icon" class="fa-solid fa-circle-check" aria-hidden="true"></i> <span id="toast-msg">Action completed!</span>
+    <button id="toast-action" type="button" class="hidden ml-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold transition">Retry</button>
   </div>
+
 
   <script>
     /* ==========================================================================
@@ -1038,6 +1056,65 @@
     let pdfDoc = null;
     let pdfRenderToken = 0;
     let pdfBaseWidths = [];
+    let pdfCurrentPage = 1;
+    let pdfTotalPages = 1;
+    let pageObserver = null;
+    let thumbObserver = null;
+
+    /* ---------- Announcements ---------- */
+    function announce(msg, assertive) {
+      const el = document.getElementById(assertive ? 'pdf-alert' : 'pdf-live');
+      if (!el) return;
+      el.textContent = '';
+      setTimeout(() => { el.textContent = msg; }, 50);
+    }
+
+    /* ---------- Page navigation ---------- */
+    function updatePageIndicator(announceChange) {
+      const ind = document.getElementById('pdf-page-indicator');
+      if (ind) ind.textContent = `Page ${pdfCurrentPage} / ${pdfTotalPages}`;
+      const prev = document.getElementById('page-prev');
+      const next = document.getElementById('page-next');
+      if (prev) prev.disabled = pdfCurrentPage <= 1;
+      if (next) next.disabled = pdfCurrentPage >= pdfTotalPages;
+      document.querySelectorAll('#pdf-thumbs [role="tab"]').forEach((b, i) => {
+        b.setAttribute('aria-selected', String(i + 1 === pdfCurrentPage));
+        b.classList.toggle('ring-2', i + 1 === pdfCurrentPage);
+        b.classList.toggle('ring-indigo-400', i + 1 === pdfCurrentPage);
+      });
+      if (announceChange) announce(`Page ${pdfCurrentPage} of ${pdfTotalPages}`);
+    }
+
+    function gotoPage(n) {
+      const page = Math.min(pdfTotalPages, Math.max(1, n));
+      const card = document.getElementById(`pdf-page-${page}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pdfCurrentPage = page;
+      updatePageIndicator(true);
+    }
+
+    function observePages(total) {
+      pdfTotalPages = total;
+      pdfCurrentPage = 1;
+      if (pageObserver) pageObserver.disconnect();
+      const root = document.getElementById('pdf-scroll');
+      pageObserver = new IntersectionObserver(entries => {
+        let best = null;
+        entries.forEach(en => {
+          if (en.isIntersecting && (!best || en.intersectionRatio > best.intersectionRatio)) best = en;
+        });
+        if (!best) return;
+        const n = parseInt(best.target.id.replace('pdf-page-', ''), 10);
+        if (n && n !== pdfCurrentPage) { pdfCurrentPage = n; updatePageIndicator(true); }
+      }, { root, threshold: [0.25, 0.6] });
+      for (let n = 1; n <= total; n++) {
+        const el = document.getElementById(`pdf-page-${n}`);
+        if (el) pageObserver.observe(el);
+      }
+      updatePageIndicator(false);
+    }
+
 
     async function renderActiveA4Form() {
       const host = document.getElementById('pdf-pages');
@@ -1099,15 +1176,19 @@
           await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
           if (token !== pdfRenderToken) return;
         }
+        observePages(doc.numPages);
         renderThumbs();
+        announce(`${PDF_LABELS[key] || 'Visa PDF'} loaded, ${doc.numPages} pages. Page 1 of ${doc.numPages}.`);
       } catch (err) {
         console.error('PDF render failed', err);
+        announce('Could not load the PDF. Showing basic viewer instead.', true);
+        showToast('Could not load PDF pages — showing basic viewer');
         host.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&view=FitH" title="Official PDF" class="w-full bg-white border-0" style="height:100%;min-height:70vh;"></iframe>`;
       }
       applyZoom();
     }
 
-    /* ---------- Page thumbnail sidebar ---------- */
+    /* ---------- Page thumbnail sidebar (lazy) ---------- */
     function toggleThumbs(force) {
       const bar = document.getElementById('pdf-thumbs');
       const btn = document.getElementById('thumbs-toggle');
@@ -1118,17 +1199,47 @@
       if (show) renderThumbs();
     }
 
-    async function renderThumbs() {
+    function renderThumbs() {
       const bar = document.getElementById('pdf-thumbs');
       if (!bar || bar.classList.contains('hidden') || !pdfDoc) return;
       const doc = pdfDoc;
       bar.innerHTML = '';
+      if (thumbObserver) thumbObserver.disconnect();
+
+      thumbObserver = new IntersectionObserver(async (entries, obs) => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          const btn = en.target;
+          obs.unobserve(btn);
+          if (btn.dataset.loaded === '1') continue;
+          btn.dataset.loaded = '1';
+          const n = Number(btn.dataset.page);
+          const c = btn.querySelector('canvas');
+          try {
+            const page = await doc.getPage(n);
+            if (doc !== pdfDoc) return;
+            const raw = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale: 132 / raw.width });
+            c.width = Math.round(vp.width);
+            c.height = Math.round(vp.height);
+            await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+            btn.querySelector('.thumb-skeleton')?.remove();
+          } catch (e) { btn.dataset.loaded = '0'; }
+        }
+      }, { root: bar, rootMargin: '250px 0px' });
+
       for (let n = 1; n <= doc.numPages; n++) {
         const btn = document.createElement('button');
         btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-label', `Go to page ${n}`);
-        btn.className = 'w-full rounded-lg overflow-hidden border border-slate-700/70 bg-white block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400';
-        btn.onclick = () => document.getElementById(`pdf-page-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        btn.setAttribute('aria-label', `Go to page ${n} of ${doc.numPages}`);
+        btn.setAttribute('aria-selected', String(n === pdfCurrentPage));
+        btn.dataset.page = String(n);
+        btn.className = 'relative w-full rounded-lg overflow-hidden border border-slate-700/70 bg-white block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400';
+        btn.onclick = () => gotoPage(n);
+        const skel = document.createElement('span');
+        skel.className = 'thumb-skeleton block w-full bg-slate-800 animate-pulse';
+        skel.style.height = '92px';
+        btn.appendChild(skel);
         const c = document.createElement('canvas');
         c.className = 'block w-full h-auto';
         btn.appendChild(c);
@@ -1137,17 +1248,11 @@
         cap.textContent = `Page ${n}`;
         btn.appendChild(cap);
         bar.appendChild(btn);
-        try {
-          const page = await doc.getPage(n);
-          if (doc !== pdfDoc) return;
-          const raw = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: 132 / raw.width });
-          c.width = Math.round(vp.width);
-          c.height = Math.round(vp.height);
-          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-        } catch (e) {}
+        thumbObserver.observe(btn);
       }
+      updatePageIndicator(false);
     }
+
 
     /* ---------- Zoom ---------- */
     function zoomPdf(dir) {
@@ -1247,7 +1352,12 @@
         case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
         case 'd': case 'D': if (!e.ctrlKey) { e.preventDefault(); downloadA4PDF(); } break;
         case 'ArrowDown': case 'ArrowRight': e.preventDefault(); stepPdf(1); break;
+        case 'PageDown': e.preventDefault(); gotoPage(pdfCurrentPage + 1); break;
+        case 'PageUp': e.preventDefault(); gotoPage(pdfCurrentPage - 1); break;
+        case 'Home': e.preventDefault(); gotoPage(1); break;
+        case 'End': e.preventDefault(); gotoPage(pdfTotalPages); break;
         case 'ArrowUp': case 'ArrowLeft': e.preventDefault(); stepPdf(-1); break;
+
       }
     });
 
@@ -1274,32 +1384,95 @@
       if (url) window.open(url, '_blank', 'noopener');
     }
 
-    function downloadA4PDF() {
-      const url = PDF_URLS[appState.activeForm];
-      const name = PDF_FILENAMES[appState.activeForm] || 'visa-form.pdf';
-      if (!url) { showToast('PDF not available'); return; }
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      showToast('Downloading official PDF…');
+    let downloadBusy = false;
+    async function downloadA4PDF(attempt = 1) {
+      const key = appState.activeForm;
+      const url = PDF_URLS[key];
+      const name = PDF_FILENAMES[key] || 'visa-form.pdf';
+      if (!url) {
+        announce('PDF not available for this form.', true);
+        showToast('PDF not available for this form', { tone: 'error' });
+        return;
+      }
+      if (downloadBusy) return;
+      downloadBusy = true;
+      const MAX = 3;
+      showToast(attempt > 1 ? `Retrying download (attempt ${attempt} of ${MAX})…` : 'Preparing official PDF…', { tone: 'info', duration: 4000 });
+      announce(attempt > 1 ? `Retrying download, attempt ${attempt} of ${MAX}.` : 'Preparing official PDF download.');
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 20000);
+        const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = name;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 4000);
+        downloadBusy = false;
+        showToast('Download started', { tone: 'success' });
+        announce(`Download started for ${name}.`);
+      } catch (err) {
+        console.error('PDF download failed', err);
+        downloadBusy = false;
+        const reason = err && err.name === 'AbortError' ? 'the connection timed out' : 'the network request failed';
+        if (attempt < MAX) {
+          const delay = 800 * attempt;
+          announce(`Download failed because ${reason}. Retrying automatically in ${Math.round(delay / 1000)} seconds.`, true);
+          showToast(`Download failed — retrying in ${Math.round(delay / 1000)}s`, { tone: 'error', duration: delay });
+          setTimeout(() => downloadA4PDF(attempt + 1), delay);
+        } else {
+          announce(`Download failed after ${MAX} attempts because ${reason}. Use the retry button or open the PDF in a new tab.`, true);
+          showToast('Download failed after 3 attempts', {
+            tone: 'error',
+            duration: 9000,
+            actionLabel: 'Retry',
+            onAction: () => downloadA4PDF(1)
+          });
+        }
+      }
     }
 
 
     /* Toast Notification Utility */
-    function showToast(message) {
+    let toastTimer = null;
+    function showToast(message, opts = {}) {
       const toast = document.getElementById('toast');
       const msg = document.getElementById('toast-msg');
+      const icon = document.getElementById('toast-icon');
+      const action = document.getElementById('toast-action');
+      if (!toast || !msg) return;
+      const tone = opts.tone || 'success';
       msg.textContent = message;
+      toast.classList.remove('bg-indigo-600', 'bg-emerald-600', 'bg-red-600');
+      toast.classList.add(tone === 'error' ? 'bg-red-600' : tone === 'info' ? 'bg-indigo-600' : 'bg-emerald-600');
+      toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+      toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
+      if (icon) icon.className = `fa-solid ${tone === 'error' ? 'fa-triangle-exclamation' : tone === 'info' ? 'fa-circle-info' : 'fa-circle-check'}`;
+      if (action) {
+        if (opts.actionLabel) {
+          action.textContent = opts.actionLabel;
+          action.setAttribute('aria-label', `${opts.actionLabel}: ${message}`);
+          action.classList.remove('hidden');
+          action.onclick = () => { toast.classList.add('opacity-0', 'pointer-events-none'); opts.onAction?.(); };
+        } else {
+          action.classList.add('hidden');
+          action.onclick = null;
+        }
+      }
       toast.classList.remove('opacity-0', 'pointer-events-none');
-      
-      setTimeout(() => {
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 2500);
+      }, opts.duration || 2800);
     }
+
   </script>
 </body>
 
