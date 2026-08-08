@@ -1350,7 +1350,12 @@
         case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
         case 'd': case 'D': if (!e.ctrlKey) { e.preventDefault(); downloadA4PDF(); } break;
         case 'ArrowDown': case 'ArrowRight': e.preventDefault(); stepPdf(1); break;
+        case 'PageDown': e.preventDefault(); gotoPage(pdfCurrentPage + 1); break;
+        case 'PageUp': e.preventDefault(); gotoPage(pdfCurrentPage - 1); break;
+        case 'Home': e.preventDefault(); gotoPage(1); break;
+        case 'End': e.preventDefault(); gotoPage(pdfTotalPages); break;
         case 'ArrowUp': case 'ArrowLeft': e.preventDefault(); stepPdf(-1); break;
+
       }
     });
 
