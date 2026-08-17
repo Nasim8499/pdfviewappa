@@ -380,7 +380,14 @@
             <button id="engine-gemini" onclick="setEngine('gemini')" class="engine-btn py-2 px-3 rounded-xl text-xs font-semibold border bg-slate-800 text-slate-400 border-slate-700 flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-sparkles text-amber-400"></i> Gemini AI Vision
             </button>
+            <button id="engine-qwen" onclick="setEngine('qwen')" class="engine-btn py-2 px-3 rounded-xl text-xs font-semibold border bg-slate-800 text-slate-400 border-slate-700 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-robot text-sky-400"></i> Qwen AI Vision
+            </button>
+            <button id="engine-base44" onclick="setEngine('base44')" class="engine-btn py-2 px-3 rounded-xl text-xs font-semibold border bg-slate-800 text-slate-400 border-slate-700 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-cube text-emerald-400"></i> Base44 AI
+            </button>
           </div>
+
           <p id="engine-desc" class="text-[10px] text-slate-400 leading-tight">
             Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.
           </p>
@@ -583,14 +590,56 @@
 
         <!-- Page navigation -->
         <div class="flex items-center justify-between gap-2 p-2 rounded-2xl glass-card" role="group" aria-label="PDF page navigation">
-          <button onclick="gotoPage(pdfCurrentPage - 1)" id="page-prev" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Previous page (keyboard shortcut Page Up)">
+          <button onclick="gotoPage(pdfCurrentPage - 1)" id="page-prev" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Previous page (keyboard shortcut Page Up)">
             <i class="fa-solid fa-chevron-up text-[10px]" aria-hidden="true"></i> Prev
           </button>
-          <p id="pdf-page-indicator" class="text-[11px] font-bold text-slate-200">Page 1 / 1</p>
-          <button onclick="gotoPage(pdfCurrentPage + 1)" id="page-next" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40" aria-label="Next page (keyboard shortcut Page Down)">
+          <div class="flex items-center gap-1.5">
+            <label for="page-input" class="sr-only">Go to page number</label>
+            <input id="page-input" type="number" min="1" value="1" inputmode="numeric"
+              onchange="jumpToTypedPage()" onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToTypedPage();}"
+              class="w-14 h-8 text-center rounded-lg bg-slate-800 border border-slate-700 text-[11px] font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              aria-label="Current page number, type a page and press Enter to jump">
+            <span id="pdf-page-indicator" class="text-[11px] font-bold text-slate-400">/ 1</span>
+          </div>
+          <button onclick="gotoPage(pdfCurrentPage + 1)" id="page-next" class="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Next page (keyboard shortcut Page Down)">
             Next <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
           </button>
         </div>
+
+        <!-- Reading mode + fit controls -->
+        <div class="flex items-center gap-1.5 p-2 rounded-2xl glass-card overflow-x-auto no-scrollbar" role="group" aria-label="Reading mode and fit controls">
+          <button id="mode-continuous" onclick="setReadingMode('continuous')" class="h-8 px-2.5 rounded-lg bg-indigo-600 text-white text-[11px] font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-pressed="true" aria-label="Continuous scrolling reading mode">
+            <i class="fa-solid fa-scroll text-[10px] mr-1" aria-hidden="true"></i>Continuous
+          </button>
+          <button id="mode-single" onclick="setReadingMode('single')" class="h-8 px-2.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-pressed="false" aria-label="Single page reading mode">
+            <i class="fa-solid fa-file text-[10px] mr-1" aria-hidden="true"></i>Single
+          </button>
+          <span class="w-px h-5 bg-slate-700 mx-0.5" aria-hidden="true"></span>
+          <button onclick="fitToWidth()" class="h-8 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Fit page to width (keyboard shortcut W)">
+            <i class="fa-solid fa-arrows-left-right text-[10px] mr-1" aria-hidden="true"></i>Fit width
+          </button>
+          <button onclick="fitToPage()" class="h-8 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Fit whole page on screen (keyboard shortcut P)">
+            <i class="fa-solid fa-up-right-and-down-left-from-center text-[10px] mr-1" aria-hidden="true"></i>Fit page
+          </button>
+        </div>
+
+        <!-- PDF text search -->
+        <div class="flex items-center gap-1.5 p-2 rounded-2xl glass-card" role="search">
+          <label for="pdf-search" class="sr-only">Search text inside this PDF</label>
+          <i class="fa-solid fa-magnifying-glass text-[11px] text-slate-400 ml-1" aria-hidden="true"></i>
+          <input id="pdf-search" type="search" placeholder="Search inside this PDF…"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();event.shiftKey?searchStep(-1):runPdfSearch();}"
+            class="flex-1 min-w-0 h-8 bg-slate-800 border border-slate-700 rounded-lg px-2 text-[11px] text-white placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            aria-label="Search text inside the current PDF, press Enter to find" aria-describedby="pdf-search-status">
+          <button onclick="searchStep(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Previous search match">
+            <i class="fa-solid fa-chevron-up text-[10px]" aria-hidden="true"></i>
+          </button>
+          <button onclick="searchStep(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 grid place-items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" aria-label="Next search match">
+            <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
+          </button>
+          <span id="pdf-search-status" class="text-[10px] font-semibold text-slate-400 min-w-[52px] text-right" role="status" aria-live="polite" aria-atomic="true"></span>
+        </div>
+
 
         <!-- Screen-reader announcements -->
         <p id="pdf-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -619,10 +668,26 @@
 
         <div class="glass-card p-4 rounded-2xl space-y-3 text-xs">
           <div>
-            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Custom Gemini API Key (Optional)</label>
-            <input type="password" id="gemini-api-key" placeholder="Enter API Key or leave empty for auto key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 focus:outline-none">
-            <p class="text-[10px] text-slate-400 mt-1">Leave empty to use automatic platform API runner for Gemini 3.1 Vision model parsing.</p>
+            <label for="gemini-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Google Gemini API Key (Free tier)</label>
+            <input type="password" id="gemini-api-key" oninput="saveKeys()" placeholder="AIza… (free Gemini key) or leave empty" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Uses the free model <span class="font-semibold text-slate-300">gemini-2.0-flash</span> from Google AI Studio. Leave empty for demo fallback.</p>
           </div>
+
+          <div>
+            <label for="qwen-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Qwen AI API Key (DashScope)</label>
+            <input type="password" id="qwen-api-key" oninput="saveKeys()" placeholder="sk-… DashScope key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-sky-500 focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Model <span class="font-semibold text-slate-300">qwen-vl-max</span> via the OpenAI-compatible DashScope endpoint.</p>
+          </div>
+
+          <div>
+            <label for="base44-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Base44 API Key</label>
+            <input type="password" id="base44-api-key" oninput="saveKeys()" placeholder="Base44 app API key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-emerald-500 focus:outline-none">
+            <input type="text" id="base44-endpoint" oninput="saveKeys()" placeholder="https://app.base44.com/api/apps/<appId>/integrations/Core/InvokeLLM" class="mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-[11px] focus:border-emerald-500 focus:outline-none" aria-label="Base44 InvokeLLM endpoint URL">
+            <p class="text-[10px] text-slate-400 mt-1">Sends the passport image to your Base44 app's InvokeLLM integration.</p>
+          </div>
+
+          <p class="text-[10px] text-slate-500 border-t border-slate-700/60 pt-2">Keys are stored only in this browser (local storage) and are never sent anywhere except the provider you choose.</p>
+
 
           <div class="border-t border-slate-700/60 pt-3 flex items-center justify-between">
             <div>
@@ -782,12 +847,114 @@
       }
 
       const desc = document.getElementById('engine-desc');
-      if (mode === 'ocr') {
-        desc.textContent = "Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.";
-      } else {
-        desc.textContent = "Gemini AI Vision intelligently reads full unstructured passport details and autofills complex fields.";
+      const DESCS = {
+        ocr: "Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.",
+        gemini: "Gemini 2.0 Flash (free tier) reads the full passport image and autofills every field. Add your free key in Settings.",
+        qwen: "Qwen VL Max reads the passport via DashScope's OpenAI-compatible API. Add your Qwen key in Settings.",
+        base44: "Base44 InvokeLLM runs the extraction through your own Base44 app. Add key + endpoint in Settings.",
+      };
+      if (desc) desc.textContent = DESCS[mode] || DESCS.ocr;
+      try { localStorage.setItem('visaai.engine', mode); } catch (e) {}
+    }
+
+    /* ---------- API key storage (local only) ---------- */
+    const KEY_FIELDS = ['gemini-api-key', 'qwen-api-key', 'base44-api-key', 'base44-endpoint'];
+    function saveKeys() {
+      KEY_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { try { localStorage.setItem('visaai.' + id, el.value.trim()); } catch (e) {} }
+      });
+    }
+    function restoreKeys() {
+      KEY_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        try { el.value = localStorage.getItem('visaai.' + id) || ''; } catch (e) {}
+      });
+      try {
+        const eng = localStorage.getItem('visaai.engine');
+        if (eng) setEngine(eng);
+      } catch (e) {}
+    }
+    function getKey(id) {
+      return (document.getElementById(id)?.value || '').trim();
+    }
+    function applyExtracted(parsed, source) {
+      if (!parsed || typeof parsed !== 'object') { loadDemoData(); return; }
+      Object.assign(appState.profile, parsed);
+      appState.profile.hasData = true;
+      populateEditFields();
+      showToast(`${source} extracted passport profile!`);
+    }
+    const PASSPORT_PROMPT = "Extract passport details from this image and return JSON strictly with keys: surname, givenNames, dob, pob, cob, sex, nationality, passportNo, issueDate, expiryDate, issuingAuthority.";
+    function parseLooseJson(text) {
+      if (!text) return null;
+      const m = text.match(/\{[\s\S]*\}/);
+      try { return JSON.parse(m ? m[0] : text); } catch (e) { return null; }
+    }
+
+    /* Qwen VL (DashScope, OpenAI-compatible) */
+    async function callQwenPassportParser() {
+      const key = getKey('qwen-api-key');
+      if (!key) { showToast('Add your Qwen API key in Settings', { tone: 'error' }); loadDemoData(); return; }
+      try {
+        const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            model: 'qwen-vl-max',
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: PASSPORT_PROMPT },
+              { type: 'image_url', image_url: { url: appState.uploadedImageBase64 } },
+            ] }],
+          }),
+        });
+        const data = await res.json();
+        const parsed = parseLooseJson(data?.choices?.[0]?.message?.content);
+        if (parsed) applyExtracted(parsed, 'Qwen AI');
+        else { showToast('Qwen returned no data — loaded fallback', { tone: 'error' }); loadDemoData(); }
+      } catch (err) {
+        console.warn('Qwen call failed', err);
+        showToast('Qwen call failed — loaded fallback', { tone: 'error' });
+        loadDemoData();
       }
     }
+
+    /* Base44 InvokeLLM integration */
+    async function callBase44PassportParser() {
+      const key = getKey('base44-api-key');
+      const endpoint = getKey('base44-endpoint');
+      if (!key || !endpoint) { showToast('Add your Base44 key and endpoint in Settings', { tone: 'error' }); loadDemoData(); return; }
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'api_key': key, 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            prompt: PASSPORT_PROMPT,
+            file_urls: [],
+            image_base64: appState.uploadedImageBase64,
+            response_json_schema: {
+              type: 'object',
+              properties: {
+                surname: { type: 'string' }, givenNames: { type: 'string' }, dob: { type: 'string' },
+                pob: { type: 'string' }, cob: { type: 'string' }, sex: { type: 'string' },
+                nationality: { type: 'string' }, passportNo: { type: 'string' },
+                issueDate: { type: 'string' }, expiryDate: { type: 'string' }, issuingAuthority: { type: 'string' },
+              },
+            },
+          }),
+        });
+        const data = await res.json();
+        const parsed = (data && typeof data === 'object' && data.surname) ? data : parseLooseJson(typeof data === 'string' ? data : JSON.stringify(data.output ?? data.result ?? data.data ?? ''));
+        if (parsed) applyExtracted(parsed, 'Base44 AI');
+        else { showToast('Base44 returned no data — loaded fallback', { tone: 'error' }); loadDemoData(); }
+      } catch (err) {
+        console.warn('Base44 call failed', err);
+        showToast('Base44 call failed — loaded fallback', { tone: 'error' });
+        loadDemoData();
+      }
+    }
+
 
     /* ==========================================================================
        IMAGE UPLOAD & OCR LOGIC
@@ -852,13 +1019,16 @@
           loadDemoData();
         }
       } else {
-        // Run Gemini AI Vision Parsing
-        statusText.innerHTML = `<i class="fa-solid fa-sparkles text-amber-400 fa-spin mr-1.5"></i> Calling Gemini AI Vision...`;
+        const labels = { gemini: 'Gemini AI Vision', qwen: 'Qwen AI Vision', base44: 'Base44 AI' };
+        statusText.innerHTML = `<i class="fa-solid fa-sparkles text-amber-400 fa-spin mr-1.5"></i> Calling ${labels[appState.engine] || 'AI'}...`;
         progressBar.style.width = `50%`;
         percentText.textContent = `50%`;
 
-        await callGeminiAIPassportParser();
+        if (appState.engine === 'qwen') await callQwenPassportParser();
+        else if (appState.engine === 'base44') await callBase44PassportParser();
+        else await callGeminiAIPassportParser();
       }
+
 
       loadingBox.classList.add('hidden');
       laser.classList.add('hidden');
