@@ -668,10 +668,26 @@
 
         <div class="glass-card p-4 rounded-2xl space-y-3 text-xs">
           <div>
-            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Custom Gemini API Key (Optional)</label>
-            <input type="password" id="gemini-api-key" placeholder="Enter API Key or leave empty for auto key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 focus:outline-none">
-            <p class="text-[10px] text-slate-400 mt-1">Leave empty to use automatic platform API runner for Gemini 3.1 Vision model parsing.</p>
+            <label for="gemini-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Google Gemini API Key (Free tier)</label>
+            <input type="password" id="gemini-api-key" oninput="saveKeys()" placeholder="AIza… (free Gemini key) or leave empty" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Uses the free model <span class="font-semibold text-slate-300">gemini-2.0-flash</span> from Google AI Studio. Leave empty for demo fallback.</p>
           </div>
+
+          <div>
+            <label for="qwen-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Qwen AI API Key (DashScope)</label>
+            <input type="password" id="qwen-api-key" oninput="saveKeys()" placeholder="sk-… DashScope key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-sky-500 focus:outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Model <span class="font-semibold text-slate-300">qwen-vl-max</span> via the OpenAI-compatible DashScope endpoint.</p>
+          </div>
+
+          <div>
+            <label for="base44-api-key" class="text-[11px] font-semibold text-slate-300 block mb-1">Base44 API Key</label>
+            <input type="password" id="base44-api-key" oninput="saveKeys()" placeholder="Base44 app API key" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-emerald-500 focus:outline-none">
+            <input type="text" id="base44-endpoint" oninput="saveKeys()" placeholder="https://app.base44.com/api/apps/<appId>/integrations/Core/InvokeLLM" class="mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-[11px] focus:border-emerald-500 focus:outline-none" aria-label="Base44 InvokeLLM endpoint URL">
+            <p class="text-[10px] text-slate-400 mt-1">Sends the passport image to your Base44 app's InvokeLLM integration.</p>
+          </div>
+
+          <p class="text-[10px] text-slate-500 border-t border-slate-700/60 pt-2">Keys are stored only in this browser (local storage) and are never sent anywhere except the provider you choose.</p>
+
 
           <div class="border-t border-slate-700/60 pt-3 flex items-center justify-between">
             <div>
