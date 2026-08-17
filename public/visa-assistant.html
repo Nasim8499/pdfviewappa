@@ -917,13 +917,16 @@
           loadDemoData();
         }
       } else {
-        // Run Gemini AI Vision Parsing
-        statusText.innerHTML = `<i class="fa-solid fa-sparkles text-amber-400 fa-spin mr-1.5"></i> Calling Gemini AI Vision...`;
+        const labels = { gemini: 'Gemini AI Vision', qwen: 'Qwen AI Vision', base44: 'Base44 AI' };
+        statusText.innerHTML = `<i class="fa-solid fa-sparkles text-amber-400 fa-spin mr-1.5"></i> Calling ${labels[appState.engine] || 'AI'}...`;
         progressBar.style.width = `50%`;
         percentText.textContent = `50%`;
 
-        await callGeminiAIPassportParser();
+        if (appState.engine === 'qwen') await callQwenPassportParser();
+        else if (appState.engine === 'base44') await callBase44PassportParser();
+        else await callGeminiAIPassportParser();
       }
+
 
       loadingBox.classList.add('hidden');
       laser.classList.add('hidden');
