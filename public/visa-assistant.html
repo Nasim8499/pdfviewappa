@@ -847,12 +847,114 @@
       }
 
       const desc = document.getElementById('engine-desc');
-      if (mode === 'ocr') {
-        desc.textContent = "Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.";
-      } else {
-        desc.textContent = "Gemini AI Vision intelligently reads full unstructured passport details and autofills complex fields.";
+      const DESCS = {
+        ocr: "Tesseract runs 100% inside your browser locally to auto-fill passport numbers, names, DOB, nationality.",
+        gemini: "Gemini 2.0 Flash (free tier) reads the full passport image and autofills every field. Add your free key in Settings.",
+        qwen: "Qwen VL Max reads the passport via DashScope's OpenAI-compatible API. Add your Qwen key in Settings.",
+        base44: "Base44 InvokeLLM runs the extraction through your own Base44 app. Add key + endpoint in Settings.",
+      };
+      if (desc) desc.textContent = DESCS[mode] || DESCS.ocr;
+      try { localStorage.setItem('visaai.engine', mode); } catch (e) {}
+    }
+
+    /* ---------- API key storage (local only) ---------- */
+    const KEY_FIELDS = ['gemini-api-key', 'qwen-api-key', 'base44-api-key', 'base44-endpoint'];
+    function saveKeys() {
+      KEY_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { try { localStorage.setItem('visaai.' + id, el.value.trim()); } catch (e) {} }
+      });
+    }
+    function restoreKeys() {
+      KEY_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        try { el.value = localStorage.getItem('visaai.' + id) || ''; } catch (e) {}
+      });
+      try {
+        const eng = localStorage.getItem('visaai.engine');
+        if (eng) setEngine(eng);
+      } catch (e) {}
+    }
+    function getKey(id) {
+      return (document.getElementById(id)?.value || '').trim();
+    }
+    function applyExtracted(parsed, source) {
+      if (!parsed || typeof parsed !== 'object') { loadDemoData(); return; }
+      Object.assign(appState.profile, parsed);
+      appState.profile.hasData = true;
+      populateEditFields();
+      showToast(`${source} extracted passport profile!`);
+    }
+    const PASSPORT_PROMPT = "Extract passport details from this image and return JSON strictly with keys: surname, givenNames, dob, pob, cob, sex, nationality, passportNo, issueDate, expiryDate, issuingAuthority.";
+    function parseLooseJson(text) {
+      if (!text) return null;
+      const m = text.match(/\{[\s\S]*\}/);
+      try { return JSON.parse(m ? m[0] : text); } catch (e) { return null; }
+    }
+
+    /* Qwen VL (DashScope, OpenAI-compatible) */
+    async function callQwenPassportParser() {
+      const key = getKey('qwen-api-key');
+      if (!key) { showToast('Add your Qwen API key in Settings', { tone: 'error' }); loadDemoData(); return; }
+      try {
+        const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            model: 'qwen-vl-max',
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: PASSPORT_PROMPT },
+              { type: 'image_url', image_url: { url: appState.uploadedImageBase64 } },
+            ] }],
+          }),
+        });
+        const data = await res.json();
+        const parsed = parseLooseJson(data?.choices?.[0]?.message?.content);
+        if (parsed) applyExtracted(parsed, 'Qwen AI');
+        else { showToast('Qwen returned no data — loaded fallback', { tone: 'error' }); loadDemoData(); }
+      } catch (err) {
+        console.warn('Qwen call failed', err);
+        showToast('Qwen call failed — loaded fallback', { tone: 'error' });
+        loadDemoData();
       }
     }
+
+    /* Base44 InvokeLLM integration */
+    async function callBase44PassportParser() {
+      const key = getKey('base44-api-key');
+      const endpoint = getKey('base44-endpoint');
+      if (!key || !endpoint) { showToast('Add your Base44 key and endpoint in Settings', { tone: 'error' }); loadDemoData(); return; }
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'api_key': key, 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            prompt: PASSPORT_PROMPT,
+            file_urls: [],
+            image_base64: appState.uploadedImageBase64,
+            response_json_schema: {
+              type: 'object',
+              properties: {
+                surname: { type: 'string' }, givenNames: { type: 'string' }, dob: { type: 'string' },
+                pob: { type: 'string' }, cob: { type: 'string' }, sex: { type: 'string' },
+                nationality: { type: 'string' }, passportNo: { type: 'string' },
+                issueDate: { type: 'string' }, expiryDate: { type: 'string' }, issuingAuthority: { type: 'string' },
+              },
+            },
+          }),
+        });
+        const data = await res.json();
+        const parsed = (data && typeof data === 'object' && data.surname) ? data : parseLooseJson(typeof data === 'string' ? data : JSON.stringify(data.output ?? data.result ?? data.data ?? ''));
+        if (parsed) applyExtracted(parsed, 'Base44 AI');
+        else { showToast('Base44 returned no data — loaded fallback', { tone: 'error' }); loadDemoData(); }
+      } catch (err) {
+        console.warn('Base44 call failed', err);
+        showToast('Base44 call failed — loaded fallback', { tone: 'error' });
+        loadDemoData();
+      }
+    }
+
 
     /* ==========================================================================
        IMAGE UPLOAD & OCR LOGIC
