@@ -2,13 +2,13 @@ import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-ro
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { UserPlus, Users, FileText, Loader2 } from "lucide-react";
-import { AppShell } from "../components/AppShell";
-import { listApplicants, createApplicant } from "../lib/api";
-import { fmtDate, useMe } from "../lib/client";
+import { AppShell } from "../../components/AppShell";
+import { listApplicants, createApplicant } from "../../lib/api";
+import { fmtDate, useMe } from "../../lib/client";
 
 export const Route = createFileRoute("/applicants/")({
   beforeLoad: async () => {
-    const { me } = await import("../lib/api");
+    const { me } = await import("../../lib/api");
     if (!(await me())) throw redirect({ to: "/login" });
   },
   component: Applicants,
