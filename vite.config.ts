@@ -12,4 +12,10 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Base44 sandbox: allow the preview proxy's rotating hostname (e.g. 3000-<sandbox-id>.e2b.app)
+  vite: {
+    server: {
+      allowedHosts: process.env.BASE44_PREVIEW_MODE === "1" ? true : undefined,
+    },
+  },
 });
