@@ -1644,6 +1644,27 @@
     }
 
   </script>
+  <script>
+    // Dashboard hand-off: fill the form from an applicant's saved passport data.
+    (function () {
+      try {
+        var pre = JSON.parse(sessionStorage.getItem('visaPrefill') || 'null');
+        if (!pre) return;
+        var map = {
+          surname: 'field-surname', givenNames: 'field-givenNames', passportNo: 'field-passportNo',
+          nationality: 'field-nationality', dob: 'field-dob', sex: 'field-sex',
+          expiryDate: 'field-expiryDate', issueDate: 'field-issueDate', pob: 'field-pob',
+          cob: 'field-cob', address: 'field-address', email: 'field-email', phone: 'field-phone',
+          occupation: 'field-occupation', employer: 'field-employer', issuingAuthority: 'field-issuingAuthority'
+        };
+        Object.keys(map).forEach(function (k) {
+          var el = document.getElementById(map[k]);
+          if (el && pre[k]) el.value = pre[k];
+        });
+        sessionStorage.removeItem('visaPrefill');
+      } catch (e) { /* no prefill */ }
+    })();
+  </script>
 </body>
 
 </html>

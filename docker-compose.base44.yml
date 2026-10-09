@@ -7,12 +7,18 @@ services:
       - /app/node_modules
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - BASE44_PREVIEW_MODE=1
       - BASE44_PUBLIC_HOST_SUFFIX=${BASE44_PUBLIC_HOST_SUFFIX}
       - BASE44_SANDBOX_HOST_DOMAIN=${BASE44_SANDBOX_HOST_DOMAIN}
       - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=${BASE44_SANDBOX_HOST_DOMAIN}
-    command: ["sh", "-ec", "bun install --frozen-lockfile && exec bun dev --host 0.0.0.0 --port 3000"]
+      - DATABASE_URL=postgres://visa:visa_dev_pw@postgres:5432/visa
+    env_file:
+      - /run/base44/app.env
+    command: ["sh", "-ec", "bun install --frozen-lockfile && bun run src/server/migrate.ts && exec bun dev --host 0.0.0.0 --port 3000"]
     restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -20,3 +26,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=visa
+      - POSTGRES_PASSWORD=visa_dev_pw
+      - POSTGRES_DB=visa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U visa -d visa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -2,5 +2,13 @@
   "previewPort": 3000,
   "healthPath": "/",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "secrets": [
+    { "name": "SESSION_SECRET", "description": "Signs role session cookies", "requiredAtBoot": true, "generatedForDevelopment": true },
+    { "name": "ADMIN_ACCESS_CODE", "description": "Access code for the administrator login", "requiredAtBoot": true, "generatedForDevelopment": true },
+    { "name": "AGENT_ACCESS_CODE", "description": "Access code for the agent (read-only) login", "requiredAtBoot": true, "generatedForDevelopment": true },
+    { "name": "GOOGLE_DRIVE_CLIENT_ID", "description": "Google OAuth client ID (console.cloud.google.com → Credentials)" },
+    { "name": "GOOGLE_DRIVE_CLIENT_SECRET", "description": "Google OAuth client secret" },
+    { "name": "GOOGLE_DRIVE_REFRESH_TOKEN", "description": "Google OAuth refresh token with Drive scope (oauthplayground or gcloud)" },
+    { "name": "GOOGLE_DRIVE_FOLDER_ID", "description": "Drive folder ID for the shared document library (optional)" }
+  ]
 }

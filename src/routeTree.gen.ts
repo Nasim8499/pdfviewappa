@@ -9,38 +9,122 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as FormRouteImport } from './routes/form'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApplicantsIndexRouteImport } from './routes/applicants/index'
+import { Route as ApplicantsIdRouteImport } from './routes/applicants.$id'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormRoute = FormRouteImport.update({
+  id: '/form',
+  path: '/form',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplicantsIndexRoute = ApplicantsIndexRouteImport.update({
+  id: '/applicants/',
+  path: '/applicants/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplicantsIdRoute = ApplicantsIdRouteImport.update({
+  id: '/applicants/$id',
+  path: '/applicants/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/form': typeof FormRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/applicants/$id': typeof ApplicantsIdRoute
+  '/applicants/': typeof ApplicantsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/form': typeof FormRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/applicants/$id': typeof ApplicantsIdRoute
+  '/applicants': typeof ApplicantsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/form': typeof FormRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/applicants/$id': typeof ApplicantsIdRoute
+  '/applicants/': typeof ApplicantsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/form'
+    | '/library'
+    | '/login'
+    | '/applicants/$id'
+    | '/applicants/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/form' | '/library' | '/login' | '/applicants/$id' | '/applicants'
+  id:
+    | '__root__'
+    | '/'
+    | '/form'
+    | '/library'
+    | '/login'
+    | '/applicants/$id'
+    | '/applicants/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FormRoute: typeof FormRoute
+  LibraryRoute: typeof LibraryRoute
+  LoginRoute: typeof LoginRoute
+  ApplicantsIdRoute: typeof ApplicantsIdRoute
+  ApplicantsIndexRoute: typeof ApplicantsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/form': {
+      id: '/form'
+      path: '/form'
+      fullPath: '/form'
+      preLoaderRoute: typeof FormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +132,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/applicants/': {
+      id: '/applicants/'
+      path: '/applicants'
+      fullPath: '/applicants/'
+      preLoaderRoute: typeof ApplicantsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/applicants/$id': {
+      id: '/applicants/$id'
+      path: '/applicants/$id'
+      fullPath: '/applicants/$id'
+      preLoaderRoute: typeof ApplicantsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FormRoute: FormRoute,
+  LibraryRoute: LibraryRoute,
+  LoginRoute: LoginRoute,
+  ApplicantsIdRoute: ApplicantsIdRoute,
+  ApplicantsIndexRoute: ApplicantsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
